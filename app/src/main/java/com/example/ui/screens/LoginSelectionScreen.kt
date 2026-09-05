@@ -1,0 +1,159 @@
+package com.example.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.ui.components.FrostedBackground
+import com.example.ui.components.FrostedGlassButton
+import com.example.ui.theme.*
+
+@Composable
+fun LoginSelectionScreen(
+    onUserLoginClick: () -> Unit,
+    onAuthorityLoginClick: () -> Unit
+) {
+    FrostedBackground {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Logo & Title
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .shadow(12.dp, RoundedCornerShape(28.dp), spotColor = Blue600)
+                    .background(Blue600, RoundedCornerShape(28.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Security,
+                    contentDescription = "Logo",
+                    tint = Color.White,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text(
+                text = "TRUscan",
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                color = Slate900,
+                letterSpacing = (-0.5).sp
+            )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            Text(
+                text = "Smart Packaged Commodity Compliance",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Slate500,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Buttons
+            FrostedGlassButton(
+                title = "USER LOGIN",
+                subtitle = "Access verification tools & reports",
+                icon = Icons.Filled.Person,
+                iconBgColor = Blue100,
+                iconColor = Blue700,
+                onClick = onUserLoginClick
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            FrostedGlassButton(
+                title = "AUTHORITY LOGIN",
+                subtitle = "Regulatory dashboard & case review",
+                icon = Icons.Filled.AdminPanelSettings,
+                iconBgColor = Amber100,
+                iconColor = Amber700,
+                onClick = onAuthorityLoginClick
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Supported Categories banner
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0x80EFF6FF), RoundedCornerShape(24.dp))
+                    .border(1.dp, Color(0x80DBEAFE), RoundedCornerShape(24.dp))
+                    .padding(24.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "SUPPORTED CATEGORIES",
+                        color = Color(0xCC2563EB),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("FOOD", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate900.copy(alpha = 0.6f))
+                        Box(modifier = Modifier.size(4.dp).background(Blue300, CircleShape))
+                        Text("COSMETICS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate900.copy(alpha = 0.6f))
+                        Box(modifier = Modifier.size(4.dp).background(Blue300, CircleShape))
+                        Text("MEDS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate900.copy(alpha = 0.6f))
+                        Box(modifier = Modifier.size(4.dp).background(Blue300, CircleShape))
+                        Text("ELEC", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate900.copy(alpha = 0.6f))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Footer
+            Text(
+                text = "Secure Government Compliance Interface",
+                color = Slate400,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("TERMS", color = Blue600.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("PRIVACY", color = Blue600.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("HELP", color = Blue600.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
