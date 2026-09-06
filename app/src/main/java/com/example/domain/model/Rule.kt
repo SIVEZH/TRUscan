@@ -24,5 +24,9 @@ data class Rule(
     val description: String,
     val validation_type: String,
     val mandatory: Boolean? = null,
-    val applicability: String? = null
+    val applicability: String? = null,
+    val exceptions: List<String>? = null,
+    val overrides: List<String>? = null,
+    val overridden_by: List<String>? = null,
+    val special_cases: List<String>? = null
 )

@@ -129,38 +129,43 @@ class ProductAnalysisRepository(private val context: Context) {
         val fieldsToExtract = ruleSet.rules.map { it.field }.distinct()
         
         val prompt = """
-            Analyze these ${base64Images.size} images of a $category product package.
-            Extract the following fields if visible: ${fieldsToExtract.joinToString(", ")}.
-            For EACH field, determine if it is present, its value, the source image, and your confidence.
-            If a field is not found, set present: false.
-            If it is found but unreadable, set present: true, value: null, and status: "UNREADABLE".
-            Do NOT invent missing declarations.
-
-            CRITICAL INSTRUCTION FOR 'declaration_letter_and_numeral_size' (Font & Numeral Height Compliance):
-            - Do NOT search for a text string literally named "declaration_letter_and_numeral_size". Instead, evaluate whether the printed declarations (such as MRP, Net Quantity, Expiry Date, Ingredients, Manufacturer details) satisfy the legal minimum numeral/letter height requirement (typically 1.0mm - 2.0mm).
-            - USE THE BARCODE AS A PHYSICAL SCALE REFERENCE:
-              * Standard retail barcodes (EAN-13 / UPC) have a standard physical height of ~20-23mm, and the printed barcode digits below the vertical bars are ~2.5mm to 2.75mm tall.
-              * Compare the height of the printed declaration letters/numerals against the barcode digits and bars as a physical scale ruler.
-              * If the declarations are clear, legible, and reasonably proportioned relative to the barcode digits (~40% to 100% of barcode digit height), or relative to standard packaging features (e.g. standard FSSAI logo, nutritional tables, bottle caps), mark:
-                "present": true,
-                "value": "Compliant (~1.5mm - 2.0mm, verified against barcode reference scale)",
-                "confidence": 0.90,
-                "status": "PASS"
-              * ONLY report non-compliant if the text is demonstrably miniature/micro-print (< 1.0mm relative to barcode digits) or intentionally illegible.
+            Analyze these ${base64Images.size} images of a product package.
+            You must process all images together as different views of the SAME package.
             
-            Return ONLY a JSON object matching this schema:
+            First, determine the package classification:
+            - is_food: true if it is a food product
+            - is_prepackaged: true if it is pre-packaged
+            - is_retail: true if it is for retail sale
+            - is_wholesale: true if it is a wholesale package
+            - is_imported: true if it is imported
+            
+            Next, extract the following fields if visible: ${fieldsToExtract.joinToString(", ")}.
+            For EVERY instance of a field found in any image, add a RawExtraction object to the 'extractions' array.
+            Provide the 'source_image' index (1-indexed based on the order of provided images) and the 'source_text' that led to the value.
+            If you are unsure about a value or it conflicts with another image, set 'uncertain' to true.
+            
+            Return ONLY a JSON object matching this schema exactly:
             {
               "category": "$category",
               "category_confidence": 0.95,
-              "fields": {
-                "field_name": {
+              "package_classification": {
+                "is_food": true,
+                "is_prepackaged": true,
+                "is_retail": true,
+                "is_wholesale": false,
+                "is_imported": false
+              },
+              "extractions": [
+                {
+                  "field": "field_name",
                   "present": true,
                   "value": "extracted text",
-                  "source": "IMAGE_1",
+                  "source_image": 1,
+                  "source_text": "text on package",
                   "confidence": 0.9,
-                  "status": null
+                  "uncertain": false
                 }
-              }
+              ]
             }
         """.trimIndent()
 
@@ -180,7 +185,18 @@ class ProductAnalysisRepository(private val context: Context) {
         
         return try {
             val cleanJson = text.replace("```json", "").replace("```", "").trim()
-            moshi.adapter(GeminiExtraction::class.java).fromJson(cleanJson)
+            val rawResult = moshi.adapter(RawExtractionResult::class.java).fromJson(cleanJson)
+            if (rawResult != null) {
+                 GeminiExtraction(
+                     category = rawResult.category ?: category,
+                     category_confidence = rawResult.category_confidence ?: 1.0,
+                     fields = emptyMap(), // This will be populated by the merger in RuleEngine
+                     package_classification = rawResult.package_classification,
+                     extractions = rawResult.extractions
+                 )
+            } else {
+                 null
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             null
