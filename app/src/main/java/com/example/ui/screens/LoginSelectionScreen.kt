@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -16,10 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.components.FrostedBackground
 import com.example.ui.components.FrostedGlassButton
 import com.example.ui.theme.*
@@ -41,20 +44,20 @@ fun LoginSelectionScreen(
             // Logo & Title
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .shadow(12.dp, RoundedCornerShape(28.dp), spotColor = Blue600)
-                    .background(Blue600, RoundedCornerShape(28.dp)),
+                    .size(96.dp)
+                    .shadow(16.dp, RoundedCornerShape(24.dp), spotColor = Color(0x3336D399))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFF11181B)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Security,
-                    contentDescription = "Logo",
-                    tint = Color.White,
-                    modifier = Modifier.size(48.dp)
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo),
+                    contentDescription = "TRUscan Logo",
+                    modifier = Modifier.fillMaxSize()
                 )
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
             Text(
                 text = "TRUscan",

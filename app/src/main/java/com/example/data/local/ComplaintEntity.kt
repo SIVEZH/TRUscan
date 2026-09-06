@@ -23,6 +23,10 @@ data class ComplaintEntity(
     val purchaseLocation: String,
     val purchaseDate: String?,
     val receiptUri: String?,
+    val purchasePlace: String? = null,
+    val additionalDescription: String? = null,
+    val livePhotoUri: String? = null,
+    val productImagesJson: String? = null,
     
     // Status and Authority
     val status: String, // NEW, UNDER_REVIEW, ADDED_TO_VIOLATION_LIST, REJECTED, REJECTED_ACTION_REQUIRED

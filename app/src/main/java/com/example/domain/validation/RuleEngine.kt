@@ -11,37 +11,33 @@ class RuleEngine {
         var failed = 0
         var notApplicable = 0
         var manualReview = 0
+        var notRequired = 0
 
         for (rule in ruleSet.rules) {
             val extractedField = extraction.fields[rule.field]
             
-            val (status, message) = evaluateRule(rule, extractedField)
+            val evaluated = evaluateRule(rule, extractedField)
             
-            when (status) {
+            when (evaluated.status) {
                 RuleStatus.PASS -> passed++
                 RuleStatus.FAIL -> failed++
                 RuleStatus.NOT_APPLICABLE -> notApplicable++
                 RuleStatus.MANUAL_REVIEW -> manualReview++
+                RuleStatus.NOT_REQUIRED -> notRequired++
             }
 
-            results.add(
-                RuleResult(
-                    rule_id = rule.rule_id,
-                    legal_reference = rule.legal_reference,
-                    field = rule.field,
-                    status = status,
-                    extracted_value = extractedField?.value,
-                    message = message,
-                    source_image = extractedField?.source,
-                    confidence = extractedField?.confidence,
-                    requirement = rule.description
-                )
-            )
+            results.add(evaluated)
         }
 
+        // Mandatory-only failure check:
+        // overallStatus is NON_COMPLIANT iff there is at least one confirmed FAIL among applicable mandatory rules (i.e. violation == true)
+        val confirmedMandatoryFailures = results.count { it.violation }
+        // Check if any applicable mandatory rules require manual review and no confirmed failure
+        val mandatoryManualReviews = results.count { it.mandatory && it.applicability == Applicability.APPLICABLE && it.status == RuleStatus.MANUAL_REVIEW }
+
         val overallStatus = when {
-            failed > 0 -> OverallStatus.NON_COMPLIANT
-            manualReview > 0 -> OverallStatus.MANUAL_REVIEW
+            confirmedMandatoryFailures > 0 -> OverallStatus.NON_COMPLIANT
+            mandatoryManualReviews > 0 -> OverallStatus.MANUAL_REVIEW
             else -> OverallStatus.COMPLIANT
         }
 
@@ -50,7 +46,9 @@ class RuleEngine {
             passed = passed,
             failed = failed,
             not_applicable = notApplicable,
-            manual_review = manualReview
+            manual_review = manualReview,
+            not_required = notRequired,
+            total_violations = confirmedMandatoryFailures
         )
 
         return ValidationReport(
@@ -61,40 +59,182 @@ class RuleEngine {
         )
     }
 
-    private fun evaluateRule(rule: Rule, extractedField: ExtractedField?): Pair<RuleStatus, String> {
-        // Handle missing field from extraction output (shouldn't happen if schema is strictly followed, but just in case)
+    private fun evaluateRule(rule: Rule, extractedField: ExtractedField?): RuleResult {
+        val (isMandatory, applicability) = determineRuleContract(rule)
+
+        // 1. If NOT_APPLICABLE
+        if (applicability == Applicability.NOT_APPLICABLE) {
+            return RuleResult(
+                rule_id = rule.rule_id,
+                legal_reference = rule.legal_reference,
+                field = rule.field,
+                status = RuleStatus.NOT_APPLICABLE,
+                extracted_value = extractedField?.value,
+                message = "Requirement not applicable to this product/category (${rule.description}).",
+                source_image = extractedField?.source,
+                confidence = extractedField?.confidence,
+                requirement = rule.description,
+                mandatory = isMandatory,
+                applicability = Applicability.NOT_APPLICABLE,
+                violation = false
+            )
+        }
+
+        // 2. Field not in extraction map
         if (extractedField == null) {
-            return if (rule.requirement.startsWith("MANDATORY")) {
-                RuleStatus.FAIL to "Required declaration was not found in the extraction result."
+            return if (isMandatory) {
+                RuleResult(
+                    rule_id = rule.rule_id,
+                    legal_reference = rule.legal_reference,
+                    field = rule.field,
+                    status = RuleStatus.FAIL,
+                    extracted_value = null,
+                    message = "Mandatory declaration not found in the provided product images.",
+                    source_image = null,
+                    confidence = 0.0,
+                    requirement = rule.description,
+                    mandatory = true,
+                    applicability = Applicability.APPLICABLE,
+                    violation = true
+                )
             } else {
-                RuleStatus.NOT_APPLICABLE to "Field not evaluated."
+                RuleResult(
+                    rule_id = rule.rule_id,
+                    legal_reference = rule.legal_reference,
+                    field = rule.field,
+                    status = RuleStatus.NOT_REQUIRED,
+                    extracted_value = null,
+                    message = "Optional declaration not present (not required).",
+                    source_image = null,
+                    confidence = null,
+                    requirement = rule.description,
+                    mandatory = false,
+                    applicability = Applicability.APPLICABLE,
+                    violation = false
+                )
             }
         }
 
-        // Handle applicability (basic logic based on requirement type)
-        // If it's an EXEMPTION rule, we just assume MANUAL_REVIEW for this prototype or NOT_APPLICABLE
-        if (rule.requirement == "EXEMPTION" || rule.requirement == "CONDITIONAL_EXEMPTION" || rule.requirement.startsWith("DEFERRED_TO")) {
-            return RuleStatus.NOT_APPLICABLE to "Rule condition or exemption evaluated: ${rule.description}"
-        }
-
-        // Evaluate based on field presence
+        // 3. Field is not present in product images
         if (!extractedField.present) {
-            return if (rule.requirement == "MANDATORY" || rule.requirement.startsWith("MANDATORY_IF_LMPC_APPLIES")) {
-                RuleStatus.FAIL to "Required declaration was not detected on the package."
-            } else if (rule.requirement.startsWith("MANDATORY_IF")) {
-                RuleStatus.MANUAL_REVIEW to "Declaration is missing, but rule is conditional (${rule.requirement}). Requires manual check if condition applies."
+            return if (isMandatory) {
+                // If it's a conditional mandatory requirement (e.g. MANDATORY_IF_IMPORTED, MANDATORY_IF_APPLICABLE),
+                // we should NOT automatically flag as a confirmed failure unless the condition is definitely true.
+                // It requires MANUAL_REVIEW to avoid false-positive violations.
+                if (isConditionalMandatory(rule.requirement)) {
+                    RuleResult(
+                        rule_id = rule.rule_id,
+                        legal_reference = rule.legal_reference,
+                        field = rule.field,
+                        status = RuleStatus.MANUAL_REVIEW,
+                        extracted_value = null,
+                        message = "Conditional mandatory declaration (${rule.requirement}) was not detected. Manual check recommended to determine if condition applies.",
+                        source_image = extractedField.source,
+                        confidence = extractedField.confidence,
+                        requirement = rule.description,
+                        mandatory = true,
+                        applicability = Applicability.APPLICABLE,
+                        violation = false
+                    )
+                } else {
+                    RuleResult(
+                        rule_id = rule.rule_id,
+                        legal_reference = rule.legal_reference,
+                        field = rule.field,
+                        status = RuleStatus.FAIL,
+                        extracted_value = null,
+                        message = "Mandatory declaration not found in the provided product images.",
+                        source_image = extractedField.source,
+                        confidence = extractedField.confidence,
+                        requirement = rule.description,
+                        mandatory = true,
+                        applicability = Applicability.APPLICABLE,
+                        violation = true
+                    )
+                }
             } else {
-                RuleStatus.NOT_APPLICABLE to "Optional or conditional declaration not present."
+                // NON-MANDATORY / OPTIONAL field missing -> NOT_REQUIRED, NO VIOLATION
+                RuleResult(
+                    rule_id = rule.rule_id,
+                    legal_reference = rule.legal_reference,
+                    field = rule.field,
+                    status = RuleStatus.NOT_REQUIRED,
+                    extracted_value = null,
+                    message = "Optional declaration not present (not required).",
+                    source_image = extractedField.source,
+                    confidence = extractedField.confidence,
+                    requirement = rule.description,
+                    mandatory = false,
+                    applicability = Applicability.APPLICABLE,
+                    violation = false
+                )
             }
         }
 
-        // Handle unreadable status
+        // 4. Field is present, but UNREADABLE or low confidence
         if (extractedField.status == "UNREADABLE") {
-            return RuleStatus.MANUAL_REVIEW to "The declaration was detected but could not be read reliably."
+            return RuleResult(
+                rule_id = rule.rule_id,
+                legal_reference = rule.legal_reference,
+                field = rule.field,
+                status = RuleStatus.MANUAL_REVIEW,
+                extracted_value = extractedField.value,
+                message = "The declaration may be present but cannot be reliably read from the provided images.",
+                source_image = extractedField.source,
+                confidence = extractedField.confidence,
+                requirement = rule.description,
+                mandatory = isMandatory,
+                applicability = Applicability.APPLICABLE,
+                violation = false
+            )
         }
 
-        // If present and not unreadable, and it's mandatory or conditionally mandatory, we assume PASS for now
-        // In a real Python rule engine, we'd parse the value and validate formatting/units
-        return RuleStatus.PASS to "Declaration detected and satisfies the rule requirements based on visual evidence."
+        // 5. Present and readable -> PASS
+        return RuleResult(
+            rule_id = rule.rule_id,
+            legal_reference = rule.legal_reference,
+            field = rule.field,
+            status = RuleStatus.PASS,
+            extracted_value = extractedField.value,
+            message = "Declaration detected and satisfies the rule requirement.",
+            source_image = extractedField.source,
+            confidence = extractedField.confidence,
+            requirement = rule.description,
+            mandatory = isMandatory,
+            applicability = Applicability.APPLICABLE,
+            violation = false
+        )
+    }
+
+    private fun determineRuleContract(rule: Rule): Pair<Boolean, Applicability> {
+        // 1. Explicit applicability attribute in rule JSON
+        if (rule.applicability.equals("NOT_APPLICABLE", ignoreCase = true)) {
+            return (rule.mandatory ?: false) to Applicability.NOT_APPLICABLE
+        }
+
+        // 2. Check exemptions or exclusions in requirement definition
+        val req = rule.requirement.uppercase()
+        if (req == "EXEMPTION" || req == "CONDITIONAL_EXEMPTION" || req.startsWith("DEFERRED_TO")) {
+            return false to Applicability.NOT_APPLICABLE
+        }
+
+        // 3. Explicit mandatory attribute in rule JSON
+        if (rule.mandatory != null) {
+            val app = if (rule.applicability.equals("NOT_APPLICABLE", ignoreCase = true)) {
+                Applicability.NOT_APPLICABLE
+            } else {
+                Applicability.APPLICABLE
+            }
+            return rule.mandatory to app
+        }
+
+        // 4. Deterministic fallback from requirement string
+        val isMandatory = req == "MANDATORY" || req.startsWith("MANDATORY_")
+        return isMandatory to Applicability.APPLICABLE
+    }
+
+    private fun isConditionalMandatory(requirement: String): Boolean {
+        val req = requirement.uppercase()
+        return req.startsWith("MANDATORY_IF") || req.contains("CONDITIONAL")
     }
 }

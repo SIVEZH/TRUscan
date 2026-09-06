@@ -26,13 +26,15 @@ class ValidationScreenViewModel(application: Application) : AndroidViewModel(app
     private val _state = MutableStateFlow<AnalysisState>(AnalysisState.Idle)
     val state: StateFlow<AnalysisState> = _state
 
-    fun analyzeProduct(frontUri: Uri, backUri: Uri, userId: String) {
+    fun analyzeProduct(images: List<com.example.domain.model.ProductImage>, userId: String) {
         _state.value = AnalysisState.Loading
         viewModelScope.launch {
-            val result = repository.analyzeProduct(frontUri, backUri)
+            val result = repository.analyzeProduct(images)
             if (result.isSuccess) {
                 val (report, extraction) = result.getOrNull()!!
-                val saveResult = storageRepository.saveScan(userId, frontUri.toString(), backUri.toString(), report)
+                val frontUri = images.firstOrNull()?.uri?.toString() ?: ""
+                val backUri = images.getOrNull(1)?.uri?.toString() ?: frontUri
+                val saveResult = storageRepository.saveScan(userId, frontUri, backUri, report)
                 if (saveResult.isSuccess) {
                     val scanId = saveResult.getOrNull()!!
                     _state.value = AnalysisState.Success(report, extraction, scanId)
@@ -43,5 +45,13 @@ class ValidationScreenViewModel(application: Application) : AndroidViewModel(app
                 _state.value = AnalysisState.Error(result.exceptionOrNull()?.message ?: "An unknown error occurred.")
             }
         }
+    }
+
+    fun analyzeProduct(frontUri: Uri, backUri: Uri, userId: String) {
+        val list = listOf(
+            com.example.domain.model.ProductImage("1", frontUri, com.example.domain.model.ImageSource.CAMERA),
+            com.example.domain.model.ProductImage("2", backUri, com.example.domain.model.ImageSource.CAMERA)
+        )
+        analyzeProduct(list, userId)
     }
 }

@@ -163,6 +163,16 @@ fun UserLoginScreen(
                                 Text("Login", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
+
+                        TextButton(
+                            onClick = {
+                                loginId = "user@test.com"
+                                password = "Test@123"
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text("Fill Demo Account (user@test.com)", fontSize = 12.sp, color = Blue600)
+                        }
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         

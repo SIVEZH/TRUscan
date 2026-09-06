@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
-import com.example.BuildConfig
+import com.example.util.ApiKeyProvider
 import com.example.data.remote.*
 import com.example.domain.model.*
 import com.squareup.moshi.Moshi
@@ -34,17 +34,24 @@ class ProductAnalysisRepository(private val context: Context) {
         }
     }
 
-    suspend fun analyzeProduct(frontUri: Uri, backUri: Uri): Result<Pair<ValidationReport, GeminiExtraction>> = withContext(Dispatchers.IO) {
+    suspend fun analyzeProduct(images: List<com.example.domain.model.ProductImage>): Result<Pair<ValidationReport, GeminiExtraction>> = withContext(Dispatchers.IO) {
         try {
-            val frontBase64 = uriToBase64(frontUri)
-            val backBase64 = uriToBase64(backUri)
+            val apiKey = ApiKeyProvider.getApiKey()
+            if (apiKey.isBlank()) {
+                return@withContext Result.failure(Exception("Gemini API key is missing. Please configure your API key in the AI Studio Secrets panel."))
+            }
 
-            if (frontBase64 == null || backBase64 == null) {
+            if (images.isEmpty()) {
+                return@withContext Result.failure(Exception("Please provide at least one product image."))
+            }
+
+            val base64List = images.mapNotNull { uriToBase64(it.uri) }
+            if (base64List.isEmpty()) {
                 return@withContext Result.failure(Exception("Unable to process images."))
             }
 
-            // Step 1: Detect Category
-            val category = detectCategory(frontBase64, backBase64)
+            // Step 1: Detect Category from all provided images
+            val category = detectCategory(base64List)
             if (category == "UNKNOWN") {
                 return@withContext Result.failure(Exception("Unable to determine whether this product is food, cosmetic, or medicine. Please provide clearer images."))
             }
@@ -54,24 +61,31 @@ class ProductAnalysisRepository(private val context: Context) {
                 ?: return@withContext Result.failure(Exception("Unable to load the validation rules. Please try again later."))
 
             // Step 3: Extract Declarations
-            val extraction = extractDeclarations(frontBase64, backBase64, category, ruleSet)
-                ?: return@withContext Result.failure(Exception("Unable to read the declarations from the package. Please capture clearer front and back images."))
+            val extraction = extractDeclarations(base64List, category, ruleSet)
+                ?: return@withContext Result.failure(Exception("Unable to read the declarations from the package. Please capture clearer images of all labels."))
 
             // Step 4: Evaluate Rules
             val engine = com.example.domain.validation.RuleEngine()
             val report = engine.evaluate(ruleSet, extraction)
 
             Result.success(Pair(report, extraction))
-
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(Exception("Unable to analyze the product. Please check your internet connection and try again."))
         }
     }
 
-    private suspend fun detectCategory(frontBase64: String, backBase64: String): String {
+    suspend fun analyzeProduct(frontUri: Uri, backUri: Uri): Result<Pair<ValidationReport, GeminiExtraction>> {
+        val list = listOf(
+            com.example.domain.model.ProductImage("1", frontUri, com.example.domain.model.ImageSource.CAMERA),
+            com.example.domain.model.ProductImage("2", backUri, com.example.domain.model.ImageSource.CAMERA)
+        )
+        return analyzeProduct(list)
+    }
+
+    private suspend fun detectCategory(base64Images: List<String>): String {
         val prompt = """
-            Analyze these front and back images of a product package.
+            Analyze these images of a product package.
             Determine the product category. It MUST be exactly one of: FOOD, COSMETICS, MEDICINES, or UNKNOWN.
             Return ONLY a JSON object matching this schema:
             {
@@ -81,20 +95,18 @@ class ProductAnalysisRepository(private val context: Context) {
             }
         """.trimIndent()
 
+        val parts = mutableListOf<Part>()
+        parts.add(Part(text = prompt))
+        base64Images.forEach { base64 ->
+            parts.add(Part(inlineData = InlineData("image/jpeg", base64)))
+        }
+
         val request = GenerateContentRequest(
-            contents = listOf(
-                Content(
-                    parts = listOf(
-                        Part(text = prompt),
-                        Part(inlineData = InlineData("image/jpeg", frontBase64)),
-                        Part(inlineData = InlineData("image/jpeg", backBase64))
-                    )
-                )
-            ),
+            contents = listOf(Content(parts = parts)),
             generationConfig = GenerationConfig(responseMimeType = "application/json")
         )
 
-        val response = RetrofitClient.service.generateContent(BuildConfig.spare2_TRUscan_API_KEY, request)
+        val response = RetrofitClient.service.generateContent(ApiKeyProvider.getApiKey(), request)
         val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: return "UNKNOWN"
         
         return try {
@@ -106,13 +118,13 @@ class ProductAnalysisRepository(private val context: Context) {
         }
     }
 
-    private suspend fun extractDeclarations(frontBase64: String, backBase64: String, category: String, ruleSet: RuleSet): GeminiExtraction? {
+    private suspend fun extractDeclarations(base64Images: List<String>, category: String, ruleSet: RuleSet): GeminiExtraction? {
         val fieldsToExtract = ruleSet.rules.map { it.field }.distinct()
         
         val prompt = """
-            Analyze these front and back images of a $category product package.
+            Analyze these ${base64Images.size} images of a $category product package.
             Extract the following fields if visible: ${fieldsToExtract.joinToString(", ")}.
-            For EACH field, determine if it is present, its value, the source image (FRONT or BACK), and your confidence.
+            For EACH field, determine if it is present, its value, the source image, and your confidence.
             If a field is not found, set present: false.
             If it is found but unreadable, set present: true, value: null, and status: "UNREADABLE".
             Do NOT invent missing declarations.
@@ -125,7 +137,7 @@ class ProductAnalysisRepository(private val context: Context) {
                 "field_name": {
                   "present": true,
                   "value": "extracted text",
-                  "source": "FRONT",
+                  "source": "IMAGE_1",
                   "confidence": 0.9,
                   "status": null
                 }
@@ -133,20 +145,18 @@ class ProductAnalysisRepository(private val context: Context) {
             }
         """.trimIndent()
 
+        val parts = mutableListOf<Part>()
+        parts.add(Part(text = prompt))
+        base64Images.forEach { base64 ->
+            parts.add(Part(inlineData = InlineData("image/jpeg", base64)))
+        }
+
         val request = GenerateContentRequest(
-            contents = listOf(
-                Content(
-                    parts = listOf(
-                        Part(text = prompt),
-                        Part(inlineData = InlineData("image/jpeg", frontBase64)),
-                        Part(inlineData = InlineData("image/jpeg", backBase64))
-                    )
-                )
-            ),
+            contents = listOf(Content(parts = parts)),
             generationConfig = GenerationConfig(responseMimeType = "application/json")
         )
 
-        val response = RetrofitClient.service.generateContent(BuildConfig.spare2_TRUscan_API_KEY, request)
+        val response = RetrofitClient.service.generateContent(ApiKeyProvider.getApiKey(), request)
         val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: return null
         
         return try {

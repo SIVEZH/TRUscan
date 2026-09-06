@@ -5,19 +5,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.domain.model.OverallStatus
 import com.example.domain.model.RuleResult
 import com.example.domain.model.ValidationReport
 import com.example.ui.analysis.ReportSummaryHeader
 import com.example.ui.analysis.RuleCard
 import com.example.ui.analysis.RuleDetailsDialog
 import com.example.ui.components.FrostedBackground
+import com.example.ui.theme.Blue600
+import com.example.ui.theme.Slate400
 import com.example.ui.theme.Slate900
 import com.example.data.local.AppDatabase
 import com.example.data.local.ComplaintEntity
@@ -30,7 +36,8 @@ fun ReportDetailScreen(
     report: ValidationReport,
     scanId: String,
     timestamp: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onRaiseComplaint: ((String) -> Unit)? = null
 ) {
     var selectedRule by remember { mutableStateOf<RuleResult?>(null) }
     val context = LocalContext.current
@@ -47,7 +54,6 @@ fun ReportDetailScreen(
             }
         }
     }
-
 
     FrostedBackground {
         Scaffold(
@@ -74,6 +80,9 @@ fun ReportDetailScreen(
                     .padding(paddingValues)
                     .padding(horizontal = 24.dp)
             ) {
+                val violations = report.violations
+                val otherRules = report.results.filter { !it.violation }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 80.dp)
@@ -81,28 +90,85 @@ fun ReportDetailScreen(
                     item {
                         ReportSummaryHeader(report)
                         Spacer(modifier = Modifier.height(24.dp))
-                        Text("Detailed Rules", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Slate900)
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
-                    
-                    items(report.results) { rule ->
-                        RuleCard(rule) { selectedRule = rule }
+
+                    // 1. PRIORITIZED VIOLATIONS SECTION (Only Confirmed Mandatory Failures)
+                    if (violations.isNotEmpty()) {
+                        item {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    Icons.Filled.Error,
+                                    contentDescription = "Violations",
+                                    tint = Color(0xFFC62828),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Confirmed Violations (${violations.size})",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFC62828)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "The following legally mandatory declarations are missing or non-compliant:",
+                                fontSize = 13.sp,
+                                color = Slate400
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        items(violations) { rule ->
+                            RuleCard(rule) { selectedRule = rule }
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+
+                    // 2. OTHER DECLARATIONS & EVALUATIONS
+                    item {
+                        Text(
+                            "All Evaluated Declarations (${report.results.size})",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Slate900
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Includes compliant mandatory fields, manual reviews, and optional declarations.",
+                            fontSize = 13.sp,
+                            color = Slate400
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
-                    
+
+                    items(if (violations.isEmpty()) report.results else otherRules) { rule ->
+                        RuleCard(rule) { selectedRule = rule }
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+
                     item {
                         Spacer(modifier = Modifier.height(24.dp))
-                        
+
                         if (complaint != null) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
-                                    Text("Complaint Status", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text("Status: ${complaint!!.status}", fontWeight = FontWeight.Bold)
-                                    
+                                    Text("Complaint Filed", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text("Reference: ${complaint!!.complaintId}", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                                    Text("Status: ${complaint!!.status}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+
                                     if (complaint!!.status == "ADDED_TO_VIOLATION_LIST") {
                                         Text("This complaint was added to the violation list.", color = Color(0xFFC62828))
                                     } else if (complaint!!.status == "REJECTED" || complaint!!.status == "REJECTED_ACTION_REQUIRED") {
@@ -112,6 +178,18 @@ fun ReportDetailScreen(
                                         }
                                     }
                                 }
+                            }
+                            Spacer(modifier = Modifier.height(24.dp))
+                        } else if (report.overall_status != OverallStatus.COMPLIANT && onRaiseComplaint != null) {
+                            Button(
+                                onClick = { onRaiseComplaint(scanId) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(54.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Blue600)
+                            ) {
+                                Text("Raise a Complaint", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                             Spacer(modifier = Modifier.height(24.dp))
                         }
@@ -125,7 +203,7 @@ fun ReportDetailScreen(
                 }
             }
         }
-        
+
         if (selectedRule != null) {
             RuleDetailsDialog(
                 rule = selectedRule!!,

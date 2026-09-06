@@ -43,6 +43,7 @@ fun PreviousScansScreen(
     userId: String,
     onBackClick: () -> Unit,
     onScanProductClick: () -> Unit,
+    onRaiseComplaint: ((String) -> Unit)? = null,
     viewModel: PreviousScansViewModel = viewModel()
 ) {
     val scans by viewModel.scans.collectAsState()
@@ -63,7 +64,8 @@ fun PreviousScansScreen(
             onBackClick = { 
                 selectedReport = null
                 selectedScan = null
-            }
+            },
+            onRaiseComplaint = onRaiseComplaint
         )
         return
     }

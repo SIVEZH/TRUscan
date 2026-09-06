@@ -9,8 +9,14 @@ enum class OverallStatus {
 enum class RuleStatus {
     PASS,
     FAIL,
+    NOT_REQUIRED,
     NOT_APPLICABLE,
     MANUAL_REVIEW
+}
+
+enum class Applicability {
+    APPLICABLE,
+    NOT_APPLICABLE
 }
 
 data class RuleResult(
@@ -22,7 +28,10 @@ data class RuleResult(
     val message: String,
     val source_image: String? = null,
     val confidence: Double? = null,
-    val requirement: String
+    val requirement: String,
+    val mandatory: Boolean = false,
+    val applicability: Applicability = Applicability.APPLICABLE,
+    val violation: Boolean = false
 )
 
 data class ValidationSummary(
@@ -30,7 +39,9 @@ data class ValidationSummary(
     val passed: Int,
     val failed: Int,
     val not_applicable: Int,
-    val manual_review: Int
+    val manual_review: Int,
+    val not_required: Int = 0,
+    val total_violations: Int = 0
 )
 
 data class ValidationReport(
@@ -38,4 +49,10 @@ data class ValidationReport(
     val overall_status: OverallStatus,
     val summary: ValidationSummary,
     val results: List<RuleResult>
-)
+) {
+    /**
+     * Only applicable mandatory failures are considered true violations.
+     */
+    val violations: List<RuleResult>
+        get() = results.filter { it.violation }
+}

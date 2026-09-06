@@ -6,7 +6,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
 import android.util.Log
-import com.example.BuildConfig
+import com.example.util.ApiKeyProvider
 import com.example.data.remote.*
 import com.example.domain.model.*
 import com.squareup.moshi.Moshi
@@ -89,7 +89,15 @@ class ValidationRepository(private val context: Context) {
                 generationConfig = GenerationConfig(responseMimeType = "application/json")
             )
             
-            val response = RetrofitClient.service.generateContent(BuildConfig.spare2_TRUscan_API_KEY, request)
+            val apiKey = ApiKeyProvider.getApiKey()
+            if (apiKey.isBlank()) {
+                return@withContext ValidationState(
+                    ValidationStatus.ERROR,
+                    "Gemini API key is missing. Please configure your API key in AI Studio Secrets panel."
+                )
+            }
+
+            val response = RetrofitClient.service.generateContent(apiKey, request)
             
             val responseText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
                 ?: return@withContext ValidationState(ValidationStatus.ERROR, "Unable to verify the image. Please try again.")

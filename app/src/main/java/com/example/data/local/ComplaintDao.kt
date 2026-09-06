@@ -23,4 +23,10 @@ interface ComplaintDao {
 
     @Query("SELECT * FROM complaints WHERE sourceScanId = :scanId LIMIT 1")
     suspend fun getComplaintByScanId(scanId: String): ComplaintEntity?
+
+    @Query("UPDATE complaints SET status = :status WHERE complaintId = :complaintId")
+    suspend fun updateStatus(complaintId: String, status: String)
+
+    @Query("UPDATE complaints SET status = :status, rejectionReason = :rejectionReason, authorityAction = :authorityAction, actionTimestamp = :actionTimestamp WHERE complaintId = :complaintId")
+    suspend fun updateRejection(complaintId: String, status: String, rejectionReason: String, authorityAction: String, actionTimestamp: String)
 }

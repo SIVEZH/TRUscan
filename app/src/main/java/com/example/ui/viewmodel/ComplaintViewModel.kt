@@ -1,281 +1,364 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.graphics.Bitmap
-import android.util.Base64
+import android.net.Uri
+import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.BuildConfig
-import com.example.data.remote.*
-import kotlinx.coroutines.delay
+import com.example.data.local.AppDatabase
+import com.example.data.local.ComplaintEntity
+import com.example.domain.model.ComplaintData
+import com.example.domain.model.ImageSource
+import com.example.domain.model.ProductImage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.json.JSONObject
-import java.io.ByteArrayOutputStream
-
-enum class VerificationStatus {
-    IDLE, VERIFYING, VERIFIED, FAILED, OTP_SENT, EXPIRED
-}
-
-enum class PhotoClassification {
-    REAL_PERSON, NO_PERSON, UNCERTAIN
-}
+import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 class ComplaintViewModel(application: Application) : AndroidViewModel(application) {
-    
-    var name = MutableStateFlow("")
-    var email = MutableStateFlow("")
-    var phone = MutableStateFlow("")
-    var address = MutableStateFlow("")
-    var purchaseLocation = MutableStateFlow("")
-    var purchaseDate = MutableStateFlow("")
-    var receiptUri = MutableStateFlow<String?>(null)
-    
-    var emailVerificationStatus = MutableStateFlow(VerificationStatus.IDLE)
-    var phoneVerificationStatus = MutableStateFlow(VerificationStatus.IDLE)
-    var emailOtp = MutableStateFlow("")
-    var phoneOtp = MutableStateFlow("")
-    
-    var emailResendCooldown = MutableStateFlow(0)
-    var phoneResendCooldown = MutableStateFlow(0)
-    var emailErrorMessage = MutableStateFlow<String?>(null)
-    var phoneErrorMessage = MutableStateFlow<String?>(null)
 
-    var livePhotoBitmap = MutableStateFlow<Bitmap?>(null)
-    var photoVerificationStatus = MutableStateFlow(VerificationStatus.IDLE)
-    var photoClassification = MutableStateFlow<PhotoClassification?>(null)
+    // Identifiers & Context
+    private val _currentScanId = MutableStateFlow("")
+    val currentScanId: StateFlow<String> = _currentScanId.asStateFlow()
 
-    fun onEmailChanged(newEmail: String) {
-        email.value = newEmail
-        if (emailVerificationStatus.value == VerificationStatus.VERIFIED) {
-            emailVerificationStatus.value = VerificationStatus.IDLE
-            emailOtp.value = ""
+    private val _userId = MutableStateFlow("")
+    val userId: StateFlow<String> = _userId.asStateFlow()
+
+    private val _productName = MutableStateFlow<String?>(null)
+    val productName: StateFlow<String?> = _productName.asStateFlow()
+
+    private val _category = MutableStateFlow("FOOD")
+    val category: StateFlow<String> = _category.asStateFlow()
+
+    private val _reportJson = MutableStateFlow("")
+    val reportJson: StateFlow<String> = _reportJson.asStateFlow()
+
+    // 1. User Details
+    val fullName = MutableStateFlow("")
+    val email = MutableStateFlow("")
+    val phoneNumber = MutableStateFlow("")
+    val address = MutableStateFlow("")
+
+    // Backwards compatibility aliases
+    val name = fullName
+    val phone = phoneNumber
+
+    // 2. Product & Purchase Details
+    val productImages = MutableStateFlow<List<ProductImage>>(emptyList())
+    val purchasePlace = MutableStateFlow("") // Shop / Store / Market name
+    val purchaseLocation = MutableStateFlow("") // Address / Area / City
+    val purchaseDate = MutableStateFlow<String?>("") // Optional purchase date
+    val additionalDescription = MutableStateFlow("") // Optional description
+    val receiptUri = MutableStateFlow<String?>(null)
+
+    // 3. Live Photo
+    val livePhotoUri = MutableStateFlow("")
+    val livePhotoBitmap = MutableStateFlow<Bitmap?>(null)
+
+    // 4. Confirmation Checkbox & Submission State
+    val isConfirmed = MutableStateFlow(false)
+    val isSubmitting = MutableStateFlow(false)
+    val submissionError = MutableStateFlow<String?>(null)
+
+    // 5. Result
+    val submittedComplaint = MutableStateFlow<ComplaintData?>(null)
+
+    /**
+     * Initializes the complaint flow for a given scan.
+     * Preserves user-entered values if navigating within the same scan session.
+     */
+    fun initialize(
+        context: Context,
+        scanId: String,
+        currentUserId: String = "unknown",
+        userName: String? = null,
+        userEmail: String? = null,
+        userPhone: String? = null,
+        initialImages: List<ProductImage>? = null
+    ) {
+        if (_currentScanId.value == scanId && scanId.isNotBlank()) {
+            // Already initialized for this scan; keep entered fields intact
+            if (productImages.value.isEmpty() && !initialImages.isNullOrEmpty()) {
+                productImages.value = initialImages
+            }
+            return
         }
-    }
 
-    fun onPhoneChanged(newPhone: String) {
-        phone.value = newPhone
-        if (phoneVerificationStatus.value == VerificationStatus.VERIFIED) {
-            phoneVerificationStatus.value = VerificationStatus.IDLE
-            phoneOtp.value = ""
+        _currentScanId.value = scanId
+        _userId.value = currentUserId
+
+        // Prefill user details if fields are empty
+        if (fullName.value.isBlank() && !userName.isNullOrBlank()) {
+            fullName.value = userName
         }
-    }
-    
-    fun sendEmailOtp() {
-        if (email.value.isBlank()) return
-        emailVerificationStatus.value = VerificationStatus.VERIFYING
-        emailErrorMessage.value = null
-        
-        viewModelScope.launch {
+        if (email.value.isBlank() && !userEmail.isNullOrBlank()) {
+            email.value = userEmail
+        }
+        if (phoneNumber.value.isBlank() && !userPhone.isNullOrBlank()) {
+            phoneNumber.value = userPhone
+        }
+
+        if (!initialImages.isNullOrEmpty()) {
+            productImages.value = initialImages
+        }
+
+        // Load ScanEntity from Room database to link product details and images if needed
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                val response = RetrofitClient.verificationService.sendEmailOtp(SendEmailOtpRequest(email.value))
-                if (response.success) {
-                    emailVerificationStatus.value = VerificationStatus.OTP_SENT
-                    startEmailCooldown()
-                    // Simulate Expiration
-                    delay(5 * 60 * 1000)
-                    if (emailVerificationStatus.value == VerificationStatus.OTP_SENT) {
-                        emailVerificationStatus.value = VerificationStatus.EXPIRED
-                        emailErrorMessage.value = "Verification code expired. Please request a new code."
-                    }
-                } else {
-                    emailVerificationStatus.value = VerificationStatus.FAILED
-                    emailErrorMessage.value = response.message ?: "Failed to send OTP"
-                }
-            } catch (e: Exception) {
-                // Mock success if no backend is actually running in this AI Studio env
-                emailVerificationStatus.value = VerificationStatus.OTP_SENT
-                startEmailCooldown()
-                delay(5 * 60 * 1000)
-                if (emailVerificationStatus.value == VerificationStatus.OTP_SENT) {
-                    emailVerificationStatus.value = VerificationStatus.EXPIRED
-                    emailErrorMessage.value = "Verification code expired. Please request a new code."
-                }
-            }
-        }
-    }
-    
-    private fun startEmailCooldown() {
-        viewModelScope.launch {
-            emailResendCooldown.value = 30
-            while (emailResendCooldown.value > 0) {
-                delay(1000)
-                emailResendCooldown.value -= 1
-            }
-        }
-    }
+                val db = AppDatabase.getDatabase(context)
+                val scan = db.scanDao().getScanById(scanId)
+                if (scan != null) {
+                    _productName.value = scan.productName
+                    _category.value = scan.category
+                    _reportJson.value = scan.reportJson
 
-    fun verifyEmailOtp() {
-        if (emailOtp.value.isBlank()) return
-        emailErrorMessage.value = null
-        val previousStatus = emailVerificationStatus.value
-        emailVerificationStatus.value = VerificationStatus.VERIFYING
-        
-        viewModelScope.launch {
-            try {
-                val response = RetrofitClient.verificationService.verifyEmailOtp(VerifyEmailOtpRequest(email.value, emailOtp.value))
-                if (response.verified == true) {
-                    emailVerificationStatus.value = VerificationStatus.VERIFIED
-                } else {
-                    emailVerificationStatus.value = previousStatus
-                    emailErrorMessage.value = response.message ?: "Invalid OTP"
-                }
-            } catch (e: Exception) {
-                // Mock success for demonstration if backend unreachable
-                if (emailOtp.value.length >= 4) {
-                    emailVerificationStatus.value = VerificationStatus.VERIFIED
-                } else {
-                    emailVerificationStatus.value = previousStatus
-                    emailErrorMessage.value = "Invalid OTP format."
-                }
-            }
-        }
-    }
-    
-    fun sendPhoneOtp() {
-        if (phone.value.isBlank()) return
-        phoneVerificationStatus.value = VerificationStatus.VERIFYING
-        phoneErrorMessage.value = null
-        
-        viewModelScope.launch {
-            try {
-                val response = RetrofitClient.verificationService.sendPhoneOtp(SendPhoneOtpRequest(phone.value))
-                if (response.success) {
-                    phoneVerificationStatus.value = VerificationStatus.OTP_SENT
-                    startPhoneCooldown()
-                    delay(5 * 60 * 1000)
-                    if (phoneVerificationStatus.value == VerificationStatus.OTP_SENT) {
-                        phoneVerificationStatus.value = VerificationStatus.EXPIRED
-                        phoneErrorMessage.value = "Verification code expired. Please request a new code."
-                    }
-                } else {
-                    phoneVerificationStatus.value = VerificationStatus.FAILED
-                    phoneErrorMessage.value = response.message ?: "Failed to send OTP"
-                }
-            } catch (e: Exception) {
-                phoneVerificationStatus.value = VerificationStatus.OTP_SENT
-                startPhoneCooldown()
-                delay(5 * 60 * 1000)
-                if (phoneVerificationStatus.value == VerificationStatus.OTP_SENT) {
-                    phoneVerificationStatus.value = VerificationStatus.EXPIRED
-                    phoneErrorMessage.value = "Verification code expired. Please request a new code."
-                }
-            }
-        }
-    }
-    
-    private fun startPhoneCooldown() {
-        viewModelScope.launch {
-            phoneResendCooldown.value = 30
-            while (phoneResendCooldown.value > 0) {
-                delay(1000)
-                phoneResendCooldown.value -= 1
-            }
-        }
-    }
-
-    fun verifyPhoneOtp() {
-        if (phoneOtp.value.isBlank()) return
-        phoneErrorMessage.value = null
-        val previousStatus = phoneVerificationStatus.value
-        phoneVerificationStatus.value = VerificationStatus.VERIFYING
-        
-        viewModelScope.launch {
-            try {
-                val response = RetrofitClient.verificationService.verifyPhoneOtp(VerifyPhoneOtpRequest(phone.value, phoneOtp.value))
-                if (response.verified == true) {
-                    phoneVerificationStatus.value = VerificationStatus.VERIFIED
-                } else {
-                    phoneVerificationStatus.value = previousStatus
-                    phoneErrorMessage.value = response.message ?: "Invalid OTP"
-                }
-            } catch (e: Exception) {
-                if (phoneOtp.value.length >= 4) {
-                    phoneVerificationStatus.value = VerificationStatus.VERIFIED
-                } else {
-                    phoneVerificationStatus.value = previousStatus
-                    phoneErrorMessage.value = "Invalid OTP format."
-                }
-            }
-        }
-    }
-    
-    fun retakeLivePhoto() {
-        livePhotoBitmap.value = null
-        photoVerificationStatus.value = VerificationStatus.IDLE
-        photoClassification.value = null
-    }
-
-    fun verifyLivePhoto(bitmap: Bitmap) {
-        livePhotoBitmap.value = bitmap
-        photoVerificationStatus.value = VerificationStatus.VERIFYING
-        
-        viewModelScope.launch {
-            try {
-                val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 800, (800.toFloat() / bitmap.width * bitmap.height).toInt(), true)
-                val stream = ByteArrayOutputStream()
-                resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream)
-                val base64Image = Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
-                
-                val prompt = """
-                    Analyze this image and determine if it contains a real human person.
-                    Return a JSON object with this exact structure:
-                    {
-                        "classification": "REAL_PERSON" | "NO_PERSON" | "UNCERTAIN",
-                        "confidence": 0.0 to 1.0,
-                        "person_detected": true/false,
-                        "obvious_ai_generation": true/false,
-                        "obvious_manipulation": true/false
-                    }
-                    Classify as REAL_PERSON if a human face/person is clearly present and appears to be a real photograph.
-                    Classify as NO_PERSON if it's an object, landscape, text, etc.
-                    Classify as UNCERTAIN if it's too blurry, very poor lighting, or looks heavily AI-generated/manipulated.
-                """.trimIndent()
-                
-                val request = GenerateContentRequest(
-                    contents = listOf(
-                        Content(
-                            parts = listOf(
-                                Part(text = prompt),
-                                Part(inlineData = InlineData(mimeType = "image/jpeg", data = base64Image))
+                    // If product images list is still empty, populate from scan
+                    if (productImages.value.isEmpty()) {
+                        val list = mutableListOf<ProductImage>()
+                        if (scan.frontImageUri.isNotBlank()) {
+                            list.add(
+                                ProductImage(
+                                    id = "front",
+                                    uri = Uri.parse(scan.frontImageUri),
+                                    source = ImageSource.CAMERA
+                                )
                             )
-                        )
-                    ),
-                    generationConfig = GenerationConfig(responseMimeType = "application/json")
-                )
-                
-                val response = RetrofitClient.service.generateContent(
-                    apiKey = BuildConfig.spare2_TRUscan_API_KEY,
-                    request = request
-                )
-                
-                val responseText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: ""
-                val jsonString = responseText.substringAfter("{").substringBeforeLast("}")
-                val json = JSONObject("{$jsonString}")
-                
-                val classificationStr = json.optString("classification", "UNCERTAIN")
-                val classification = try {
-                    PhotoClassification.valueOf(classificationStr)
-                } catch (e: Exception) {
-                    PhotoClassification.UNCERTAIN
+                        }
+                        if (scan.backImageUri.isNotBlank() && scan.backImageUri != scan.frontImageUri) {
+                            list.add(
+                                ProductImage(
+                                    id = "back",
+                                    uri = Uri.parse(scan.backImageUri),
+                                    source = ImageSource.CAMERA
+                                )
+                            )
+                        }
+                        productImages.value = list
+                    }
                 }
-                
-                photoClassification.value = classification
-                
-                if (classification == PhotoClassification.REAL_PERSON) {
-                    photoVerificationStatus.value = VerificationStatus.VERIFIED
-                } else if (classification == PhotoClassification.NO_PERSON) {
-                    photoVerificationStatus.value = VerificationStatus.FAILED
-                } else {
-                    photoVerificationStatus.value = VerificationStatus.FAILED
-                }
-                
             } catch (e: Exception) {
                 e.printStackTrace()
-                photoClassification.value = PhotoClassification.UNCERTAIN
-                photoVerificationStatus.value = VerificationStatus.FAILED
             }
         }
+    }
+
+    fun setLivePhoto(uri: String, bitmap: Bitmap? = null) {
+        livePhotoUri.value = uri
+        livePhotoBitmap.value = bitmap
+    }
+
+    fun clearLivePhoto() {
+        livePhotoUri.value = ""
+        livePhotoBitmap.value = null
+    }
+
+    fun setPurchaseDate(date: String?) {
+        purchaseDate.value = date
+    }
+
+    // Validation for User Details
+    fun validateUserDetails(): Pair<Boolean, Map<String, String>> {
+        val errors = mutableMapOf<String, String>()
+
+        if (fullName.value.trim().isBlank()) {
+            errors["fullName"] = "Please enter your full name"
+        }
+
+        val emailVal = email.value.trim()
+        if (emailVal.isBlank()) {
+            errors["email"] = "Please enter your email address"
+        } else if (!Patterns.EMAIL_ADDRESS.matcher(emailVal).matches()) {
+            errors["email"] = "Please enter a valid email address (e.g., name@example.com)"
+        }
+
+        val phoneVal = phoneNumber.value.trim().replace(Regex("[^0-9]"), "")
+        if (phoneNumber.value.trim().isBlank()) {
+            errors["phone"] = "Please enter your phone number"
+        } else if (phoneVal.length < 10) {
+            errors["phone"] = "Please enter a valid 10-digit phone number"
+        }
+
+        if (address.value.trim().isBlank()) {
+            errors["address"] = "Please enter your address"
+        }
+
+        return Pair(errors.isEmpty(), errors)
+    }
+
+    // Validation for Product / Purchase Details
+    fun validateProductDetails(): Pair<Boolean, Map<String, String>> {
+        val errors = mutableMapOf<String, String>()
+
+        if (purchasePlace.value.trim().isBlank()) {
+            errors["purchasePlace"] = "Please enter the shop or market name"
+        }
+
+        if (purchaseLocation.value.trim().isBlank()) {
+            errors["purchaseLocation"] = "Please enter the purchase location or address"
+        }
+
+        if (productImages.value.isEmpty()) {
+            errors["productImages"] = "At least one product image is required"
+        }
+
+        return Pair(errors.isEmpty(), errors)
+    }
+
+    // Validation for Live Photo
+    fun validateLivePhoto(): Pair<Boolean, String?> {
+        return if (livePhotoUri.value.isBlank()) {
+            Pair(false, "Live photo is required before continuing")
+        } else {
+            Pair(true, null)
+        }
+    }
+
+    // Full Validation before submission
+    fun validateAll(): Pair<Boolean, String?> {
+        val (userOk, userErrors) = validateUserDetails()
+        if (!userOk) {
+            return Pair(false, userErrors.values.firstOrNull() ?: "Please complete all required personal details")
+        }
+
+        val (prodOk, prodErrors) = validateProductDetails()
+        if (!prodOk) {
+            return Pair(false, prodErrors.values.firstOrNull() ?: "Please complete all required purchase details")
+        }
+
+        val (photoOk, photoError) = validateLivePhoto()
+        if (!photoOk) {
+            return Pair(false, photoError ?: "Please take a live photo to attach")
+        }
+
+        if (!isConfirmed.value) {
+            return Pair(false, "Please confirm the declaration checkbox before submitting")
+        }
+
+        return Pair(true, null)
+    }
+
+    /**
+     * Submits the complaint to local Room database.
+     * Generates a unique complaint reference formatted as: TRU-YYYYMMDD-XXXXXX
+     * ZERO AI calls are made on the live photo or complaint data.
+     */
+    fun submitComplaint(
+        context: Context,
+        onSuccess: (complaintId: String) -> Unit,
+        onError: (message: String) -> Unit
+    ) {
+        if (isSubmitting.value) return
+
+        val (valid, errorMessage) = validateAll()
+        if (!valid) {
+            submissionError.value = errorMessage
+            onError(errorMessage ?: "Please verify all required fields")
+            return
+        }
+
+        isSubmitting.value = true
+        submissionError.value = null
+
+        viewModelScope.launch {
+            try {
+                val dateStr = DateTimeFormatter.ofPattern("yyyyMMdd")
+                    .withZone(ZoneId.systemDefault())
+                    .format(Instant.now())
+                val randomSuffix = UUID.randomUUID().toString().replace("-", "").take(6).uppercase()
+                val complaintId = "TRU-$dateStr-$randomSuffix"
+                val createdAt = Instant.now().toString()
+
+                val imagesJson = productImages.value.joinToString(";") { it.uri.toString() }
+
+                val entity = ComplaintEntity(
+                    complaintId = complaintId,
+                    userId = _userId.value.ifBlank { "user_local" },
+                    sourceScanId = _currentScanId.value,
+                    category = _category.value,
+                    productName = _productName.value,
+                    reportJson = _reportJson.value,
+                    complainantName = fullName.value.trim(),
+                    complainantEmail = email.value.trim(),
+                    complainantPhone = phoneNumber.value.trim(),
+                    complainantAddress = address.value.trim(),
+                    purchaseLocation = purchaseLocation.value.trim(),
+                    purchaseDate = purchaseDate.value?.trim()?.takeIf { it.isNotBlank() },
+                    receiptUri = receiptUri.value,
+                    purchasePlace = purchasePlace.value.trim(),
+                    additionalDescription = additionalDescription.value.trim().takeIf { it.isNotBlank() },
+                    livePhotoUri = livePhotoUri.value,
+                    productImagesJson = imagesJson,
+                    status = "NEW",
+                    authorityId = null,
+                    authorityAction = null,
+                    rejectionReason = null,
+                    actionTimestamp = null,
+                    createdAt = createdAt
+                )
+
+                withContext(Dispatchers.IO) {
+                    val db = AppDatabase.getDatabase(context)
+                    db.complaintDao().insertComplaint(entity)
+                }
+
+                val complaintData = ComplaintData(
+                    complaintId = complaintId,
+                    sourceScanId = _currentScanId.value,
+                    fullName = fullName.value.trim(),
+                    email = email.value.trim(),
+                    phoneNumber = phoneNumber.value.trim(),
+                    address = address.value.trim(),
+                    productImages = productImages.value,
+                    purchasePlace = purchasePlace.value.trim(),
+                    purchaseLocation = purchaseLocation.value.trim(),
+                    purchaseDate = purchaseDate.value?.trim()?.takeIf { it.isNotBlank() },
+                    additionalDescription = additionalDescription.value.trim().takeIf { it.isNotBlank() },
+                    livePhotoUri = livePhotoUri.value,
+                    complaintCreatedAt = createdAt
+                )
+
+                submittedComplaint.value = complaintData
+                isSubmitting.value = false
+
+                onSuccess(complaintId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                isSubmitting.value = false
+                val err = "Unable to record complaint. Please try again."
+                submissionError.value = err
+                onError(err)
+            }
+        }
+    }
+
+    /**
+     * Resets complaint form state for fresh submissions
+     */
+    fun resetForm() {
+        _currentScanId.value = ""
+        fullName.value = ""
+        email.value = ""
+        phoneNumber.value = ""
+        address.value = ""
+        productImages.value = emptyList()
+        purchasePlace.value = ""
+        purchaseLocation.value = ""
+        purchaseDate.value = ""
+        additionalDescription.value = ""
+        receiptUri.value = null
+        livePhotoUri.value = ""
+        livePhotoBitmap.value = null
+        isConfirmed.value = false
+        isSubmitting.value = false
+        submissionError.value = null
+        submittedComplaint.value = null
     }
 }

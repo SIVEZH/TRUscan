@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -26,7 +27,12 @@ import com.example.ui.viewmodel.ScanViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
+import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,9 +55,9 @@ class MainActivity : ComponentActivity() {
             contract = ActivityResultContracts.RequestPermission(),
             onResult = { granted ->
                 if (granted) {
-                    navController.navigate("camera/true") // Defaulting to front, will be overridden by args
+                    navController.navigate("camera")
                 } else {
-                    Toast.makeText(this, "Camera permission required.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Camera permission is required to capture product photos.", Toast.LENGTH_SHORT).show()
                 }
             }
         )
@@ -104,10 +110,12 @@ class MainActivity : ComponentActivity() {
               ScanProductScreen(
                   viewModel = scanViewModel,
                   onBackClick = { navController.popBackStack() },
-                  onUseCameraClick = { isFront -> 
-                      cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                      // We save the destination in state or pass it via navigation arg
-                      navController.navigate("camera/$isFront")
+                  onUseCameraClick = { 
+                      if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                          navController.navigate("camera")
+                      } else {
+                          cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                      }
                   },
                   onContinueClick = {
                       navController.navigate("validation_report")
@@ -115,46 +123,104 @@ class MainActivity : ComponentActivity() {
               )
             }
             composable("validation_report") {
-                val frontUri = scanViewModel.frontImageUri.collectAsState().value
-                val backUri = scanViewModel.backImageUri.collectAsState().value
+                val productImages = scanViewModel.productImages.collectAsState().value
                 val authState = authViewModel.authState.collectAsState().value
                 val userId = (authState as? AuthState.Success)?.user?.id?.toString() ?: "unknown"
-                if (frontUri != null && backUri != null) {
+                if (productImages.isNotEmpty()) {
                     com.example.ui.analysis.ValidationScreen(
-                        frontUri = frontUri,
-                        backUri = backUri,
+                        images = productImages,
                         userId = userId,
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateHome = { 
                             navController.popBackStack("user_dashboard", inclusive = false)
                         },
-                        onRaiseComplaint = { scanId -> navController.navigate("complaint_screen/$scanId") }
+                        onRaiseComplaint = { scanId -> navController.navigate("complaint_user_details/$scanId") }
                     )
                 }
             }
-            composable("complaint_screen/{scanId}") { backStackEntry ->
+            composable("complaint_user_details/{scanId}") { backStackEntry ->
                 val scanId = backStackEntry.arguments?.getString("scanId") ?: ""
                 val authState = authViewModel.authState.collectAsState().value
                 val user = (authState as? AuthState.Success)?.user
-                
-                com.example.ui.screens.ComplaintRegistrationScreen(
-                    scanId = scanId,
-                    user = user,
+                val productImages = scanViewModel.productImages.collectAsState().value
+
+                LaunchedEffect(scanId) {
+                    complaintViewModel.initialize(
+                        context = this@MainActivity,
+                        scanId = scanId,
+                        currentUserId = user?.id?.toString() ?: "unknown",
+                        userName = user?.name,
+                        userEmail = user?.email,
+                        userPhone = user?.phone,
+                        initialImages = productImages.ifEmpty { null }
+                    )
+                }
+
+                com.example.ui.screens.complaint.UserDetailsScreen(
                     viewModel = complaintViewModel,
                     onBackClick = { navController.popBackStack() },
-                    onReviewComplaint = { navController.navigate("complaint_review/$scanId") }
+                    onContinueClick = { navController.navigate("complaint_product_details/$scanId") }
                 )
+            }
+            composable("complaint_product_details/{scanId}") { backStackEntry ->
+                val scanId = backStackEntry.arguments?.getString("scanId") ?: ""
+                com.example.ui.screens.complaint.ProductPurchaseDetailsScreen(
+                    viewModel = complaintViewModel,
+                    onBackClick = { navController.popBackStack() },
+                    onContinueClick = { navController.navigate("complaint_live_photo/$scanId") }
+                )
+            }
+            composable("complaint_live_photo/{scanId}") { backStackEntry ->
+                val scanId = backStackEntry.arguments?.getString("scanId") ?: ""
+                com.example.ui.screens.complaint.LivePhotoScreen(
+                    viewModel = complaintViewModel,
+                    onBackClick = { navController.popBackStack() },
+                    onContinueClick = { navController.navigate("complaint_confirm/$scanId") }
+                )
+            }
+            composable("complaint_confirm/{scanId}") { backStackEntry ->
+                val scanId = backStackEntry.arguments?.getString("scanId") ?: ""
+                com.example.ui.screens.complaint.ConfirmComplaintScreen(
+                    viewModel = complaintViewModel,
+                    onBackClick = { navController.popBackStack() },
+                    onEditUserDetails = { navController.navigate("complaint_user_details/$scanId") },
+                    onEditProductDetails = { navController.navigate("complaint_product_details/$scanId") },
+                    onRetakeLivePhoto = { navController.navigate("complaint_live_photo/$scanId") },
+                    onSubmitSuccess = { complaintId ->
+                        navController.navigate("complaint_submitted/$complaintId") {
+                            popUpTo("complaint_user_details/$scanId") { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable("complaint_submitted/{complaintId}") { backStackEntry ->
+                val complaintId = backStackEntry.arguments?.getString("complaintId") ?: ""
+                com.example.ui.screens.complaint.ComplaintSuccessScreen(
+                    complaintId = complaintId,
+                    viewModel = complaintViewModel,
+                    onViewComplaintClick = {
+                        navController.popBackStack("user_dashboard", inclusive = false)
+                    },
+                    onBackToHomeClick = {
+                        navController.popBackStack("user_dashboard", inclusive = false)
+                    }
+                )
+            }
+            composable("complaint_screen/{scanId}") { backStackEntry ->
+                val scanId = backStackEntry.arguments?.getString("scanId") ?: ""
+                LaunchedEffect(scanId) {
+                    navController.navigate("complaint_user_details/$scanId") {
+                        popUpTo("complaint_screen/$scanId") { inclusive = true }
+                    }
+                }
             }
             composable("complaint_review/{scanId}") { backStackEntry ->
                 val scanId = backStackEntry.arguments?.getString("scanId") ?: ""
-                com.example.ui.screens.ComplaintReviewScreen(
-                    scanId = scanId,
-                    viewModel = complaintViewModel,
-                    onBackClick = { navController.popBackStack() },
-                    onContinueClick = { 
-                        navController.popBackStack("user_dashboard", inclusive = false) 
+                LaunchedEffect(scanId) {
+                    navController.navigate("complaint_confirm/$scanId") {
+                        popUpTo("complaint_review/$scanId") { inclusive = true }
                     }
-                )
+                }
             }
             composable("previous_scans") {
                 val authState = authViewModel.authState.collectAsState().value
@@ -165,24 +231,27 @@ class MainActivity : ComponentActivity() {
                     onScanProductClick = { 
                         navController.popBackStack()
                         navController.navigate("scan_product") 
+                    },
+                    onRaiseComplaint = { scanId ->
+                        navController.navigate("complaint_user_details/$scanId")
                     }
                 )
             }
-            composable("camera/{isFront}") { backStackEntry ->
-                val isFront = backStackEntry.arguments?.getString("isFront")?.toBoolean() ?: true
+            composable("camera") {
+                val capturedImages by scanViewModel.productImages.collectAsState()
                 CameraScreen(
-                    isFrontProduct = isFront,
-                    onBackClick = { navController.popBackStack() },
-                    onImageCaptured = { uri -> 
-                        if (isFront) {
-                            scanViewModel.setFrontImage(uri)
-                            // Immediately navigate to back camera
-                            navController.popBackStack()
-                            navController.navigate("camera/false")
-                        } else {
-                            scanViewModel.setBackImage(uri)
-                            navController.popBackStack()
-                        }
+                    capturedImages = capturedImages,
+                    onImageCaptured = { uri ->
+                        scanViewModel.addImage(uri, com.example.domain.model.ImageSource.CAMERA)
+                    },
+                    onRemoveImage = { id ->
+                        scanViewModel.removeImage(id)
+                    },
+                    onDoneClick = {
+                        navController.popBackStack()
+                    },
+                    onBackClick = {
+                        navController.popBackStack()
                     }
                 )
             }

@@ -22,5 +22,7 @@ data class Rule(
     val requirement: String,
     val condition: String,
     val description: String,
-    val validation_type: String
+    val validation_type: String,
+    val mandatory: Boolean? = null,
+    val applicability: String? = null
 )

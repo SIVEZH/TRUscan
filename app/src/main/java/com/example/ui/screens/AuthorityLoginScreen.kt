@@ -163,6 +163,16 @@ fun AuthorityLoginScreen(
                                 Text("Login", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
+
+                        TextButton(
+                            onClick = {
+                                loginId = "food@test.com"
+                                password = "Test@123"
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text("Fill Demo Authority (food@test.com)", fontSize = 12.sp, color = Amber700)
+                        }
                     }
                 }
             }

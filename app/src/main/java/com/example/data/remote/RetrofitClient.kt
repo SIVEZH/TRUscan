@@ -11,8 +11,8 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
     private const val BASE_URL = "https://generativelanguage.googleapis.com/"
     
-    // Provide a fallback URL for compilation if BACKEND_BASE_URL is not set in secrets yet
-    private val BACKEND_BASE_URL = runCatching { com.example.BuildConfig.BACKEND_BASE_URL }.getOrDefault("https://api.example.com/")
+    // Default base URL for external API if needed
+    private const val BACKEND_BASE_URL = "https://api.example.com/"
 
     private val moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())

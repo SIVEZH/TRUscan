@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.AppDatabase
 import com.example.data.local.ComplaintEntity
+import com.example.domain.model.RuleStatus
 import com.example.domain.model.ValidationReport
 import com.example.ui.components.FrostedBackground
 import com.squareup.moshi.Moshi
@@ -106,27 +107,65 @@ fun AuthorityComplaintDetailScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     if (report != null) {
+                        val currentReport = report!!
                         Text("Overall Result:", fontWeight = FontWeight.Bold)
-                        Text(report!!.overall_status.name, color = if (report!!.overall_status.name == "COMPLIANT") Color(0xFF2E7D32) else Color(0xFFC62828), fontWeight = FontWeight.Bold)
+                        val statusColor = when (currentReport.overall_status.name) {
+                            "COMPLIANT" -> Color(0xFF2E7D32)
+                            "NON_COMPLIANT" -> Color(0xFFC62828)
+                            else -> Color(0xFFEF6C00)
+                        }
+                        Text(currentReport.overall_status.name.replace("_", " "), color = statusColor, fontWeight = FontWeight.Bold)
                         
+                        val violations = currentReport.violations
+                        if (violations.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Confirmed Mandatory Violations (${violations.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFFC62828))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            violations.forEach { rule ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text("Rule: ${rule.rule_id} (${rule.legal_reference})", fontWeight = FontWeight.Bold, color = Color(0xFFC62828))
+                                        Text("Field: ${rule.field}", fontSize = 14.sp)
+                                        Text("Extracted: ${rule.extracted_value ?: "Not found"}", fontSize = 14.sp)
+                                        Text("Requirement: ${rule.requirement}", fontSize = 13.sp, color = Color.Gray)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text("Violation: Mandatory declaration missing / non-compliant", fontWeight = FontWeight.Bold, color = Color(0xFFC62828))
+                                        Text("Details: ${rule.message}", color = Color(0xFFC62828), fontSize = 13.sp)
+                                    }
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Rule Results & Violations", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("All Evaluated Rules (${currentReport.results.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        report!!.results.forEach { rule ->
+                        currentReport.results.forEach { rule ->
                             Card(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
-                                    Text("Rule: ${rule.rule_id}", fontWeight = FontWeight.Bold)
+                                    val ruleTag = if (rule.mandatory) "MANDATORY" else "OPTIONAL"
+                                    Text("Rule: ${rule.rule_id} • $ruleTag", fontWeight = FontWeight.Bold)
                                     Text("Field: ${rule.field}", fontSize = 14.sp)
                                     Text("Extracted: ${rule.extracted_value ?: "N/A"}", fontSize = 14.sp)
-                                    Text("Required: ${rule.requirement}", fontSize = 14.sp, color = Color.Gray)
+                                    Text("Required: ${rule.requirement}", fontSize = 13.sp, color = Color.Gray)
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Status: ${rule.status.name}", fontWeight = FontWeight.Bold, color = if (rule.status.name == "PASS") Color(0xFF2E7D32) else Color(0xFFC62828))
-                                    if (rule.status.name != "PASS") {
-                                        Text("Issue: ${rule.message}", color = Color(0xFFC62828), fontSize = 14.sp)
+                                    
+                                    val itemColor = when (rule.status) {
+                                        RuleStatus.PASS -> Color(0xFF2E7D32)
+                                        RuleStatus.FAIL -> Color(0xFFC62828)
+                                        RuleStatus.MANUAL_REVIEW -> Color(0xFFEF6C00)
+                                        else -> Color.Gray
+                                    }
+                                    Text("Status: ${rule.status.name}", fontWeight = FontWeight.Bold, color = itemColor)
+                                    if (rule.status != RuleStatus.PASS) {
+                                        Text("Explanation: ${rule.message}", color = itemColor, fontSize = 13.sp)
                                     }
                                 }
                             }
@@ -163,14 +202,9 @@ fun AuthorityComplaintDetailScreen(
                         confirmButton = {
                             Button(onClick = {
                                 coroutineScope.launch {
-                                    val updated = c.copy(
-                                        status = "ADDED_TO_VIOLATION_LIST",
-                                        authorityId = authorityId,
-                                        authorityAction = "ADD_TO_VIOLATION_LIST",
-                                        actionTimestamp = Instant.now().toString()
-                                    )
-                                    AppDatabase.getDatabase(context).complaintDao().updateComplaint(updated)
-                                    complaint = updated
+                                    val db = AppDatabase.getDatabase(context)
+                                    db.complaintDao().updateStatus(c.complaintId, "ADDED_TO_VIOLATION_LIST")
+                                    complaint = c.copy(status = "ADDED_TO_VIOLATION_LIST")
                                     showViolationDialog = false
                                 }
                             }) { Text("Confirm") }
@@ -184,77 +218,72 @@ fun AuthorityComplaintDetailScreen(
                 if (showRejectDialog) {
                     AlertDialog(
                         onDismissRequest = { showRejectDialog = false },
-                        title = { Text("Complaint Rejection") },
+                        title = { Text("Reject Complaint") },
                         text = {
                             Column {
+                                Text("Provide a reason for rejection:")
+                                Spacer(modifier = Modifier.height(8.dp))
                                 OutlinedTextField(
                                     value = rejectReason,
                                     onValueChange = { rejectReason = it },
-                                    label = { Text("Reason for rejection") },
+                                    label = { Text("Reason") },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
-                                Text("Action against complainant:")
-                                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                    RadioButton(selected = !actionAgainstUser, onClick = { actionAgainstUser = false })
-                                    Text("No action against user")
-                                }
-                                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                    RadioButton(selected = actionAgainstUser, onClick = { actionAgainstUser = true })
-                                    Text("Take action against user")
+                                Row(
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Checkbox(
+                                        checked = actionAgainstUser,
+                                        onCheckedChange = { actionAgainstUser = it }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Action against user (Flag complaint)", fontSize = 14.sp)
                                 }
                             }
                         },
                         confirmButton = {
-                            Button(
-                                onClick = {
-                                    if (actionAgainstUser) {
+                            Button(onClick = {
+                                if (actionAgainstUser) {
+                                    showRejectDialog = false
+                                    showTakeActionConfirmation = true
+                                } else {
+                                    coroutineScope.launch {
+                                        val db = AppDatabase.getDatabase(context)
+                                        val now = Instant.now().toString()
+                                        db.complaintDao().updateRejection(c.complaintId, "REJECTED", rejectReason, "REJECT_NO_ACTION", now)
+                                        complaint = c.copy(status = "REJECTED", rejectionReason = rejectReason, authorityAction = "REJECT_NO_ACTION", actionTimestamp = now)
                                         showRejectDialog = false
-                                        showTakeActionConfirmation = true
-                                    } else {
-                                        coroutineScope.launch {
-                                            val updated = c.copy(
-                                                status = "REJECTED",
-                                                authorityId = authorityId,
-                                                authorityAction = "REJECT_NO_ACTION",
-                                                rejectionReason = rejectReason,
-                                                actionTimestamp = Instant.now().toString()
-                                            )
-                                            AppDatabase.getDatabase(context).complaintDao().updateComplaint(updated)
-                                            complaint = updated
-                                            showRejectDialog = false
-                                        }
                                     }
-                                },
-                                enabled = rejectReason.isNotBlank()
-                            ) { Text("Confirm Rejection") }
+                                }
+                            }) { Text("Reject") }
                         },
-                        dismissButton = { TextButton(onClick = { showRejectDialog = false }) { Text("Cancel") } }
+                        dismissButton = {
+                            TextButton(onClick = { showRejectDialog = false }) { Text("Cancel") }
+                        }
                     )
                 }
 
                 if (showTakeActionConfirmation) {
                     AlertDialog(
                         onDismissRequest = { showTakeActionConfirmation = false },
-                        title = { Text("Take action against complainant?") },
-                        text = { Text("The complainant's submitted contact details will become available for authorized action.") },
+                        title = { Text("Confirm Action Against User") },
+                        text = { Text("Are you sure you want to flag this user and take legal action for fraudulent submission?") },
                         confirmButton = {
                             Button(onClick = {
                                 coroutineScope.launch {
-                                    val updated = c.copy(
-                                        status = "REJECTED_ACTION_REQUIRED",
-                                        authorityId = authorityId,
-                                        authorityAction = "REJECT_TAKE_ACTION",
-                                        rejectionReason = rejectReason,
-                                        actionTimestamp = Instant.now().toString()
-                                    )
-                                    AppDatabase.getDatabase(context).complaintDao().updateComplaint(updated)
-                                    complaint = updated
+                                    val db = AppDatabase.getDatabase(context)
+                                    val now = Instant.now().toString()
+                                    db.complaintDao().updateRejection(c.complaintId, "REJECTED_ACTION_REQUIRED", rejectReason, "REJECT_TAKE_ACTION", now)
+                                    complaint = c.copy(status = "REJECTED_ACTION_REQUIRED", rejectionReason = rejectReason, authorityAction = "REJECT_TAKE_ACTION", actionTimestamp = now)
                                     showTakeActionConfirmation = false
                                 }
-                            }) { Text("Confirm") }
+                            }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))) { Text("Confirm & Flag User") }
                         },
-                        dismissButton = { TextButton(onClick = { showTakeActionConfirmation = false }) { Text("Cancel") } }
+                        dismissButton = {
+                            TextButton(onClick = { showTakeActionConfirmation = false }) { Text("Cancel") }
+                        }
                     )
                 }
             }
