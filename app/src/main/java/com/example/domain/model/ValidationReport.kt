@@ -20,6 +20,12 @@ enum class Applicability {
     NOT_APPLICABLE
 }
 
+data class Evidence(
+    val image: Int? = null,
+    val text: String? = null,
+    val value: String? = null
+)
+
 data class RuleResult(
     val rule_id: String,
     val legal_reference: String,
@@ -32,7 +38,11 @@ data class RuleResult(
     val requirement: String,
     val mandatory: Boolean = false,
     val applicability: Applicability = Applicability.APPLICABLE,
-    val violation: Boolean = false
+    val violation: Boolean = false,
+    val controlling_provision: String? = null,
+    val overridden: Boolean = false,
+    val overridden_by: String? = null,
+    val evidence: Evidence? = null
 ) {
     val applicable: Boolean
         get() = applicability == Applicability.APPLICABLE
@@ -67,7 +77,7 @@ data class ValidationReport(
      */
     val hasConfirmedMandatoryViolation: Boolean
         get() = results.any {
-            it.status == RuleStatus.FAIL && it.mandatory && it.applicable
+            it.status == RuleStatus.FAIL && it.mandatory && it.applicable && !it.overridden
         }
 
     val canRaiseComplaint: Boolean

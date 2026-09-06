@@ -16,7 +16,11 @@
       "description": "Name and address of manufacturer; where manufacturer is not packer, manufacturer and packer; for imported packages, importer name and address.",
       "validation_type": "PRESENCE_AND_FORMAT",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_1_AA",
@@ -28,7 +32,11 @@
       "description": "Name of country of origin, manufacture or assembly must be declared for imported products.",
       "validation_type": "PRESENCE",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_1_B",
@@ -40,7 +48,11 @@
       "description": "Common or generic name of the commodity must be declared; for packages containing more than one product, the name and number or quantity of each product must be declared.",
       "validation_type": "PRESENCE",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_1_C",
@@ -52,7 +64,11 @@
       "description": "Net quantity must be declared in the applicable standard unit of weight or measure, or by number where sold by number.",
       "validation_type": "PRESENCE_AND_UNIT",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_1_DA",
@@ -64,7 +80,11 @@
       "description": "If a commodity may become unfit for human consumption after a period of time, the best-before or use-by date, month and year must also be declared, subject to the rule's proviso where another law makes provision.",
       "validation_type": "PRESENCE_IF_APPLICABLE",
       "mandatory": false,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_1_E",
@@ -76,7 +96,11 @@
       "description": "Retail sale price must be declared as the Maximum Retail Price (MRP), inclusive of all taxes, in Indian currency, subject to applicable statutory exceptions.",
       "validation_type": "PRESENCE_AND_FORMAT",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_1_F",
@@ -88,7 +112,11 @@
       "description": "Where size of the commodity is relevant, its dimensions must be declared; where different pieces have different dimensions, the dimensions of each different piece must be stated.",
       "validation_type": "PRESENCE_IF_APPLICABLE",
       "mandatory": false,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_2",
@@ -100,7 +128,11 @@
       "description": "Name, address, telephone number and email address of the person or office to be contacted for consumer complaints must be declared.",
       "validation_type": "PRESENCE_AND_FORMAT",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_7",
@@ -112,7 +144,11 @@
       "description": "Every package containing genetically modified food must bear the words 'GM' at the top of its principal display panel.",
       "validation_type": "PRESENCE_IF_APPLICABLE",
       "mandatory": false,
-      "applicability": "NOT_APPLICABLE"
+      "applicability": "NOT_APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_8",
@@ -124,7 +160,11 @@
       "description": "Packages containing soap, shampoos, tooth pastes and other cosmetics and toiletries must bear the prescribed red/brown or green dot according to the provision.",
       "validation_type": "PRESENCE_IF_APPLICABLE",
       "mandatory": false,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_10",
@@ -136,7 +176,11 @@
       "description": "An e-commerce entity must ensure that mandatory declarations specified in Rule 6(1), except month and year of manufacture/packing/import, are displayed on its digital/electronic network used for e-commerce transactions.",
       "validation_type": "PRESENCE_ON_LISTING",
       "mandatory": false,
-      "applicability": "NOT_APPLICABLE"
+      "applicability": "NOT_APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_6_11",
@@ -148,7 +192,11 @@
       "description": "Unit sale price must be declared in rupees, rounded to two decimal places, using the applicable unit basis, subject to the exceptions in Rule 6(11).",
       "validation_type": "PRESENCE_AND_CALCULATION",
       "mandatory": false,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_7",
@@ -160,7 +208,11 @@
       "description": "Declarations on the principal display panel must meet the prescribed minimum numeral/letter height requirements; the exact minimum depends on net quantity and method of marking.",
       "validation_type": "SIZE_AND_LEGIBILITY",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_9_1",
@@ -172,7 +224,11 @@
       "description": "Every required declaration must be legible and prominent; MRP and net quantity numerals must have the prescribed conspicuous contrast, subject to stated exceptions.",
       "validation_type": "LEGIBILITY_AND_CONTRAST",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_9_2",
@@ -184,7 +240,11 @@
       "description": "No declaration may be made so as to require it to be read through the liquid commodity contained in the package.",
       "validation_type": "VISIBILITY",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_9_3",
@@ -196,7 +256,11 @@
       "description": "Where a package has an outside container/wrapper, it must also contain the required declarations unless the stated transparency/inner-package exception applies.",
       "validation_type": "PRESENCE_IF_APPLICABLE",
       "mandatory": false,
-      "applicability": "NOT_APPLICABLE"
+      "applicability": "NOT_APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_9_4",
@@ -208,7 +272,11 @@
       "description": "Required particulars must be in Hindi in Devanagari script or English; additional languages are permitted.",
       "validation_type": "LANGUAGE",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_10",
@@ -220,7 +288,11 @@
       "description": "Package must conspicuously bear manufacturer/packer/importer name and complete address, subject to the small-package identification provision.",
       "validation_type": "PRESENCE_AND_FORMAT",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_11_3",
@@ -232,7 +304,11 @@
       "description": "For commodities likely to undergo significant variation in weight/measure due to environmental or other conditions, quantity may be qualified by the words 'when packed' only where permitted.",
       "validation_type": "CONDITIONAL_FORMAT",
       "mandatory": false,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_12_1",
@@ -244,7 +320,11 @@
       "description": "Quantity declaration must use an appropriate unit of weight, measure or number, or a combination that gives accurate and adequate information.",
       "validation_type": "UNIT_VALIDATION",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_12_2",
@@ -256,7 +336,11 @@
       "description": "Except for Fourth Schedule commodities, quantity is generally expressed by mass for solids/semi-solids/viscous/mixed products, length for linear measure, area for area measure, volume for liquids/cubic measure, or number when sold by number.",
       "validation_type": "UNIT_AND_CATEGORY_VALIDATION",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_12_4",
@@ -268,7 +352,11 @@
       "description": "Where weight/measure/number alone is insufficient to give full information about dimensions or number, the relevant additional declaration must accompany it.",
       "validation_type": "PRESENCE_IF_APPLICABLE",
       "mandatory": false,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_26_A",
@@ -280,7 +368,11 @@
       "description": "Rules do not apply to packages containing 10 g or 10 ml or less when sold by weight or measure, subject to the stated tobacco exception.",
       "validation_type": "APPLICABILITY",
       "mandatory": false,
-      "applicability": "NOT_APPLICABLE"
+      "applicability": "NOT_APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_26_B",
@@ -292,7 +384,11 @@
       "description": "Rules do not apply to packages containing fast food items packed by a restaurant, hotel and the like.",
       "validation_type": "APPLICABILITY",
       "mandatory": false,
-      "applicability": "NOT_APPLICABLE"
+      "applicability": "NOT_APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_COS_6_1_D",
@@ -304,7 +400,11 @@
       "description": "For packages containing cosmetic products, the manufacture-date provision is subject to the Drugs and Cosmetics Rules, 1945.",
       "validation_type": "EXTERNAL_RULESET",
       "mandatory": false,
-      "applicability": "NOT_APPLICABLE"
+      "applicability": "NOT_APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_COS_6_8",
@@ -316,7 +416,11 @@
       "description": "Packages containing soap, shampoos, tooth pastes and other cosmetics and toiletries must bear the prescribed red/brown or green dot according to the provision.",
       "validation_type": "PRESENCE_IF_APPLICABLE",
       "mandatory": false,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_COS_SCHEDULE_3_1",
@@ -328,7 +432,11 @@
       "description": "All kinds of soaps are among commodities whose quantity declaration may be qualified by 'when packed' where Rule 11(4) conditions are met.",
       "validation_type": "CONDITIONAL_FORMAT",
       "mandatory": false,
-      "applicability": "NOT_APPLICABLE"
+      "applicability": "NOT_APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_COS_SCHEDULE_3_2",
@@ -340,7 +448,11 @@
       "description": "Lotions are among commodities whose quantity declaration may be qualified by 'when packed' where Rule 11(4) conditions are met.",
       "validation_type": "CONDITIONAL_FORMAT",
       "mandatory": false,
-      "applicability": "NOT_APPLICABLE"
+      "applicability": "NOT_APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_COS_SCHEDULE_3_3",
@@ -352,7 +464,11 @@
       "description": "Cream other than cream of milk is among commodities whose quantity declaration may be qualified by 'when packed' where Rule 11(4) conditions are met.",
       "validation_type": "CONDITIONAL_FORMAT",
       "mandatory": false,
-      "applicability": "NOT_APPLICABLE"
+      "applicability": "NOT_APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     },
     {
       "rule_id": "LMPC_COS_SCHEDULE_4_26",
@@ -364,7 +480,11 @@
       "description": "Cosmetics including creams, shampoo, lotions and perfumes may be declared by weight or measure.",
       "validation_type": "ALLOWED_UNIT",
       "mandatory": true,
-      "applicability": "APPLICABLE"
+      "applicability": "APPLICABLE",
+      "exceptions": [],
+      "overrides": [],
+      "overridden_by": [],
+      "special_cases": []
     }
   ],
   "exclusions_or_cross_references": [
