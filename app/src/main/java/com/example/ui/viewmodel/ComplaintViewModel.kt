@@ -12,6 +12,9 @@ import com.example.data.local.ComplaintEntity
 import com.example.domain.model.ComplaintData
 import com.example.domain.model.ImageSource
 import com.example.domain.model.ProductImage
+import com.example.domain.model.ValidationReport
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +43,9 @@ class ComplaintViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _reportJson = MutableStateFlow("")
     val reportJson: StateFlow<String> = _reportJson.asStateFlow()
+
+    private val _isComplaintAllowed = MutableStateFlow<Boolean?>(null)
+    val isComplaintAllowed: StateFlow<Boolean?> = _isComplaintAllowed.asStateFlow()
 
     // 1. User Details
     val fullName = MutableStateFlow("")
@@ -94,6 +100,7 @@ class ComplaintViewModel(application: Application) : AndroidViewModel(applicatio
 
         _currentScanId.value = scanId
         _userId.value = currentUserId
+        _isComplaintAllowed.value = null
 
         // Prefill user details if fields are empty
         if (fullName.value.isBlank() && !userName.isNullOrBlank()) {
@@ -120,6 +127,15 @@ class ComplaintViewModel(application: Application) : AndroidViewModel(applicatio
                     _category.value = scan.category
                     _reportJson.value = scan.reportJson
 
+                    val allowed = try {
+                        val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+                        val report = moshi.adapter(ValidationReport::class.java).fromJson(scan.reportJson)
+                        report?.hasConfirmedMandatoryViolation == true
+                    } catch (e: Exception) {
+                        false
+                    }
+                    _isComplaintAllowed.value = allowed
+
                     // If product images list is still empty, populate from scan
                     if (productImages.value.isEmpty()) {
                         val list = mutableListOf<ProductImage>()
@@ -143,9 +159,12 @@ class ComplaintViewModel(application: Application) : AndroidViewModel(applicatio
                         }
                         productImages.value = list
                     }
+                } else {
+                    _isComplaintAllowed.value = false
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                _isComplaintAllowed.value = false
             }
         }
     }
@@ -257,6 +276,13 @@ class ComplaintViewModel(application: Application) : AndroidViewModel(applicatio
     ) {
         if (isSubmitting.value) return
 
+        if (_isComplaintAllowed.value == false) {
+            val err = "Complaints can only be raised for confirmed mandatory violations."
+            submissionError.value = err
+            onError(err)
+            return
+        }
+
         val (valid, errorMessage) = validateAll()
         if (!valid) {
             submissionError.value = errorMessage
@@ -344,6 +370,7 @@ class ComplaintViewModel(application: Application) : AndroidViewModel(applicatio
      */
     fun resetForm() {
         _currentScanId.value = ""
+        _isComplaintAllowed.value = null
         fullName.value = ""
         email.value = ""
         phoneNumber.value = ""

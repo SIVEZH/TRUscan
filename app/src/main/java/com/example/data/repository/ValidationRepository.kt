@@ -7,6 +7,7 @@ import android.net.Uri
 import android.util.Base64
 import android.util.Log
 import com.example.util.ApiKeyProvider
+import com.example.util.NetworkUtils
 import com.example.data.remote.*
 import com.example.domain.model.*
 import com.squareup.moshi.Moshi
@@ -89,11 +90,19 @@ class ValidationRepository(private val context: Context) {
                 generationConfig = GenerationConfig(responseMimeType = "application/json")
             )
             
+            // Check internet connectivity first
+            if (!NetworkUtils.isConnected(context)) {
+                return@withContext ValidationState(
+                    ValidationStatus.ERROR,
+                    "No internet connection detected. Please check your Wi-Fi or mobile data connection and try again."
+                )
+            }
+
             val apiKey = ApiKeyProvider.getApiKey()
             if (apiKey.isBlank()) {
                 return@withContext ValidationState(
                     ValidationStatus.ERROR,
-                    "Gemini API key is missing. Please configure your API key in AI Studio Secrets panel."
+                    "API key is not configured. Please add CHANGEABLE_API_KEY in the AI Studio Secrets panel."
                 )
             }
 
@@ -130,13 +139,10 @@ class ValidationRepository(private val context: Context) {
                 }
                 ValidationState(ValidationStatus.INVALID, userFriendlyReason)
             }
-        } catch (e: retrofit2.HttpException) {
-            e.printStackTrace()
-            val errorBody = e.response()?.errorBody()?.string() ?: e.message()
-            ValidationState(ValidationStatus.ERROR, "API Error: ${e.code()} - $errorBody")
         } catch (e: Exception) {
             e.printStackTrace()
-            ValidationState(ValidationStatus.ERROR, "Unable to verify the image. Please check your internet connection and try again. Error: ${e.message}")
+            val specificError = NetworkUtils.parseApiError(e, context)
+            ValidationState(ValidationStatus.ERROR, specificError)
         }
     }
 }

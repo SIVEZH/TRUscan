@@ -143,6 +143,7 @@ class MainActivity : ComponentActivity() {
                 val authState = authViewModel.authState.collectAsState().value
                 val user = (authState as? AuthState.Success)?.user
                 val productImages = scanViewModel.productImages.collectAsState().value
+                val isComplaintAllowed by complaintViewModel.isComplaintAllowed.collectAsState()
 
                 LaunchedEffect(scanId) {
                     complaintViewModel.initialize(
@@ -154,6 +155,17 @@ class MainActivity : ComponentActivity() {
                         userPhone = user?.phone,
                         initialImages = productImages.ifEmpty { null }
                     )
+                }
+
+                LaunchedEffect(isComplaintAllowed) {
+                    if (isComplaintAllowed == false) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Complaints can only be raised for confirmed mandatory violations.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        navController.popBackStack()
+                    }
                 }
 
                 com.example.ui.screens.complaint.UserDetailsScreen(

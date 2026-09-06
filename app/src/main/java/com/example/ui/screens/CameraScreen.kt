@@ -29,7 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -149,24 +149,20 @@ fun CameraScreen(
                 )
             }
 
-            if (capturedImages.isNotEmpty()) {
-                Button(
-                    onClick = onDoneClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = Blue600),
-                    shape = RoundedCornerShape(16.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.Check,
-                        contentDescription = "Done",
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Done", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-            } else {
-                Spacer(modifier = Modifier.width(44.dp))
+            Button(
+                onClick = onDoneClick,
+                colors = ButtonDefaults.buttonColors(containerColor = Blue600),
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = "Done",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Done", fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -222,7 +218,7 @@ fun CameraScreen(
                                     .align(Alignment.BottomStart)
                                     .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(topEnd = 6.dp))
                                     .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
+                                ) {
                                 Text(
                                     text = "#${index + 1}",
                                     color = Color.White,
@@ -246,16 +242,13 @@ fun CameraScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Shutter Button
-            Row(
+            // Shutter Button ONLY (Done button removed from shutter area)
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                contentAlignment = Alignment.Center
             ) {
-                Spacer(modifier = Modifier.width(48.dp))
-
                 Box(
                     modifier = Modifier
                         .size(76.dp)
@@ -284,17 +277,6 @@ fun CameraScreen(
                             .size(58.dp)
                             .background(if (isCapturing) Color.LightGray else Color.White, CircleShape)
                     )
-                }
-
-                if (capturedImages.isNotEmpty()) {
-                    TextButton(
-                        onClick = onDoneClick,
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-                    ) {
-                        Text("Done", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                } else {
-                    Spacer(modifier = Modifier.width(48.dp))
                 }
             }
         }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.domain.model.Applicability
 import com.example.domain.model.OverallStatus
 import com.example.domain.model.RuleResult
 import com.example.domain.model.RuleStatus
@@ -129,8 +131,12 @@ fun ValidationScreen(
                     }
                     is AnalysisState.Success -> {
                         val report = currentState.report
-                        val violations = report.violations
-                        val otherRules = report.results.filter { !it.violation }
+                        val violations = report.results.filter { it.status == RuleStatus.FAIL && it.mandatory && it.applicable }
+                        val manualReviews = report.results.filter { it.status == RuleStatus.MANUAL_REVIEW }
+                        val notMandatoryRules = report.results.filter { it.status == RuleStatus.NOT_MANDATORY }
+                        val notRequiredRules = report.results.filter { it.status == RuleStatus.NOT_REQUIRED }
+                        val compliantRules = report.results.filter { it.status == RuleStatus.PASS }
+                        val notApplicableRules = report.results.filter { it.status == RuleStatus.NOT_APPLICABLE }
 
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
@@ -141,7 +147,7 @@ fun ValidationScreen(
                                 Spacer(modifier = Modifier.height(24.dp))
                             }
 
-                            // 1. PRIORITIZED VIOLATIONS SECTION (Only Confirmed Mandatory Failures)
+                            // 1. MANDATORY VIOLATIONS
                             if (violations.isNotEmpty()) {
                                 item {
                                     Row(
@@ -150,13 +156,13 @@ fun ValidationScreen(
                                     ) {
                                         Icon(
                                             Icons.Filled.Error,
-                                            contentDescription = "Violations",
+                                            contentDescription = "Mandatory Violations",
                                             tint = Color(0xFFC62828),
                                             modifier = Modifier.size(22.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            "Confirmed Violations (${violations.size})",
+                                            "Mandatory Violations (${violations.size})",
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFFC62828)
@@ -181,31 +187,206 @@ fun ValidationScreen(
                                 }
                             }
 
-                            // 2. OTHER DECLARATIONS & EVALUATIONS
-                            item {
-                                Text(
-                                    "All Evaluated Declarations (${report.results.size})",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Slate900
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    "Includes compliant mandatory fields, manual reviews, and optional declarations.",
-                                    fontSize = 13.sp,
-                                    color = Slate400
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
+                            // 2. MANUAL REVIEW
+                            if (manualReviews.isNotEmpty()) {
+                                item {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Warning,
+                                            contentDescription = "Manual Review",
+                                            tint = Color(0xFFEF6C00),
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Manual Review (${manualReviews.size})",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFEF6C00)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Mandatory declarations requiring manual inspection or verification:",
+                                        fontSize = 13.sp,
+                                        color = Slate400
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+
+                                items(manualReviews) { rule ->
+                                    RuleCard(rule) { selectedRule = rule }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                }
+
+                                item {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
                             }
 
-                            items(if (violations.isEmpty()) report.results else otherRules) { rule ->
-                                RuleCard(rule) { selectedRule = rule }
-                                Spacer(modifier = Modifier.height(10.dp))
+                            // 3. NOT MANDATORY
+                            if (notMandatoryRules.isNotEmpty()) {
+                                item {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Check,
+                                            contentDescription = "Not Mandatory",
+                                            tint = Slate700,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Not Mandatory (${notMandatoryRules.size})",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Slate700
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Declarations not mandatory under applicable rules:",
+                                        fontSize = 13.sp,
+                                        color = Slate400
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+
+                                items(notMandatoryRules) { rule ->
+                                    RuleCard(rule) { selectedRule = rule }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                }
+
+                                item {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                            }
+
+                            // 4. NOT REQUIRED
+                            if (notRequiredRules.isNotEmpty()) {
+                                item {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Check,
+                                            contentDescription = "Not Required",
+                                            tint = Slate700,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Not Required (${notRequiredRules.size})",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Slate700
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Declarations not required under current packaging conditions:",
+                                        fontSize = 13.sp,
+                                        color = Slate400
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+
+                                items(notRequiredRules) { rule ->
+                                    RuleCard(rule) { selectedRule = rule }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                }
+
+                                item {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                            }
+
+                            // 5. COMPLIANT REQUIREMENTS
+                            if (compliantRules.isNotEmpty()) {
+                                item {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.CheckCircle,
+                                            contentDescription = "Compliant Requirements",
+                                            tint = Color(0xFF2E7D32),
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Compliant Requirements (${compliantRules.size})",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF2E7D32)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Mandatory declarations verified and compliant with regulations:",
+                                        fontSize = 13.sp,
+                                        color = Slate400
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+
+                                items(compliantRules) { rule ->
+                                    RuleCard(rule) { selectedRule = rule }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                }
+
+                                item {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                            }
+
+                            // 6. NOT APPLICABLE
+                            if (notApplicableRules.isNotEmpty()) {
+                                item {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Info,
+                                            contentDescription = "Not Applicable",
+                                            tint = Slate400,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Not Applicable (${notApplicableRules.size})",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Slate400
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Rules not applicable to this product category:",
+                                        fontSize = 13.sp,
+                                        color = Slate400
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+
+                                items(notApplicableRules) { rule ->
+                                    RuleCard(rule) { selectedRule = rule }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                }
                             }
 
                             item {
                                 Spacer(modifier = Modifier.height(32.dp))
-                                if (report.overall_status != OverallStatus.COMPLIANT) {
+                                // Raise a Complaint is ONLY shown when there is at least one confirmed mandatory violation
+                                if (report.canRaiseComplaint) {
                                     Button(
                                         onClick = { onRaiseComplaint((state as AnalysisState.Success).scanId) },
                                         modifier = Modifier
@@ -291,46 +472,106 @@ fun ReportSummaryHeader(report: ValidationReport) {
         colors = CardDefaults.cardColors(containerColor = GlassWhite)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                "Category: ${report.category}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Slate400
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val (statusText, statusColor, statusIcon) = when (report.overall_status) {
-                OverallStatus.COMPLIANT -> Triple("COMPLIANT", Color(0xFF2E7D32), Icons.Filled.CheckCircle)
-                OverallStatus.NON_COMPLIANT -> Triple("NON-COMPLIANT", Color(0xFFC62828), Icons.Filled.Error)
-                OverallStatus.MANUAL_REVIEW -> Triple("MANUAL REVIEW", Color(0xFFEF6C00), Icons.Filled.Warning)
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(statusIcon, contentDescription = statusText, tint = statusColor, modifier = Modifier.size(28.dp))
-                Spacer(modifier = Modifier.width(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    statusText,
-                    fontSize = 24.sp,
+                    "Compliance Summary",
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = statusColor
+                    color = Slate400,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    report.category,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Blue600
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+
+            val (statusText, statusColor, statusIcon, statusDesc) = when (report.overall_status) {
+                OverallStatus.COMPLIANT -> Quad(
+                    "COMPLIANT",
+                    Color(0xFF2E7D32),
+                    Icons.Filled.CheckCircle,
+                    "✓ Product Compliant (No mandatory violations found)"
+                )
+                OverallStatus.NON_COMPLIANT -> Quad(
+                    "NON-COMPLIANT",
+                    Color(0xFFC62828),
+                    Icons.Filled.Error,
+                    "${report.summary.total_violations} Mandatory Violation${if (report.summary.total_violations > 1) "s" else ""} Found"
+                )
+                OverallStatus.MANUAL_REVIEW -> Quad(
+                    "MANUAL REVIEW",
+                    Color(0xFFEF6C00),
+                    Icons.Filled.Warning,
+                    "Some mandatory declarations require manual verification."
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = Color.White.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text("${report.summary.total_rules} Rules Evaluated", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Slate700)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(statusIcon, contentDescription = statusText, tint = statusColor, modifier = Modifier.size(32.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("✓ ${report.summary.passed} Passed", color = Color(0xFF2E7D32), fontWeight = FontWeight.Medium)
-                    Text("✗ ${report.summary.total_violations} Violations", color = Color(0xFFC62828), fontWeight = FontWeight.Bold)
+                    Text(
+                        statusText,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor
+                    )
+                    Text(
+                        statusDesc,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Slate700
+                    )
                 }
-                Column {
-                    Text("— ${report.summary.not_required} Not Required", color = Slate400, fontWeight = FontWeight.Medium)
-                    Text("⚠ ${report.summary.manual_review} Review", color = Color(0xFFEF6C00), fontWeight = FontWeight.Medium)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text("${report.summary.total_rules} Total Rules", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Slate700)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White.copy(alpha = 0.6f)
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("✓ ${report.summary.passed} Passed", color = Color(0xFF2E7D32), fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "✕ ${report.summary.total_violations} Violations",
+                            color = if (report.summary.total_violations > 0) Color(0xFFC62828) else Slate400,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("✓ ${report.summary.not_mandatory} Not Mandatory", color = Slate700, fontWeight = FontWeight.Medium)
+                        if (report.summary.not_required > 0) {
+                            Text("✓ ${report.summary.not_required} Not Required", color = Slate700, fontWeight = FontWeight.Medium)
+                        } else if (report.summary.not_applicable > 0) {
+                            Text("— ${report.summary.not_applicable} Not Applicable", color = Slate400, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    if (report.summary.not_required > 0 && report.summary.not_applicable > 0) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("— ${report.summary.not_applicable} Not Applicable", color = Slate400, fontWeight = FontWeight.Medium)
+                            if (report.summary.manual_review > 0) {
+                                Text("⚠ ${report.summary.manual_review} Review", color = Color(0xFFEF6C00), fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    } else if (report.summary.manual_review > 0) {
+                        Text("⚠ ${report.summary.manual_review} Review Required", color = Color(0xFFEF6C00), fontWeight = FontWeight.Medium)
+                    }
                 }
             }
         }
@@ -342,7 +583,8 @@ fun RuleCard(rule: RuleResult, onClick: () -> Unit) {
     val (statusColor, statusIcon, bgColor, badgeText) = when (rule.status) {
         RuleStatus.PASS -> Quad(Color(0xFF2E7D32), Icons.Filled.CheckCircle, Color(0xFFE8F5E9), "PASS")
         RuleStatus.FAIL -> Quad(Color(0xFFC62828), Icons.Filled.Error, Color(0xFFFFEBEE), if (rule.violation) "VIOLATION" else "FAIL")
-        RuleStatus.NOT_REQUIRED -> Quad(Slate400, Icons.Filled.Info, Color(0xFFF1F5F9), "NOT REQUIRED")
+        RuleStatus.NOT_MANDATORY -> Quad(Slate700, Icons.Filled.Check, Color(0xFFF1F5F9), "NOT MANDATORY")
+        RuleStatus.NOT_REQUIRED -> Quad(Slate700, Icons.Filled.Check, Color(0xFFF1F5F9), "NOT REQUIRED")
         RuleStatus.NOT_APPLICABLE -> Quad(Slate400, Icons.Filled.Info, Color(0xFFF1F5F9), "N/A")
         RuleStatus.MANUAL_REVIEW -> Quad(Color(0xFFEF6C00), Icons.Filled.Warning, Color(0xFFFFF3E0), "MANUAL REVIEW")
     }
@@ -411,9 +653,21 @@ fun RuleCard(rule: RuleResult, onClick: () -> Unit) {
                         fontSize = 13.sp,
                         color = Slate700
                     )
+                } else if (rule.status == RuleStatus.NOT_MANDATORY) {
+                    Text(
+                        if (!rule.extracted_value.isNullOrBlank()) "Detected: ${rule.extracted_value} (not mandatory)" else "Not mandatory under applicable rule",
+                        fontSize = 13.sp,
+                        color = Slate400
+                    )
                 } else if (rule.status == RuleStatus.NOT_REQUIRED) {
                     Text(
-                        "Optional declaration (not present)",
+                        if (!rule.extracted_value.isNullOrBlank()) "Detected: ${rule.extracted_value} (not required)" else "Not required for current packaging context",
+                        fontSize = 13.sp,
+                        color = Slate400
+                    )
+                } else if (rule.status == RuleStatus.NOT_APPLICABLE) {
+                    Text(
+                        "Not applicable to this product category",
                         fontSize = 13.sp,
                         color = Slate400
                     )
@@ -440,7 +694,8 @@ fun RuleDetailsDialog(rule: RuleResult, onDismiss: () -> Unit) {
             val (statusText, statusColor) = when (rule.status) {
                 RuleStatus.PASS -> "PASS" to Color(0xFF2E7D32)
                 RuleStatus.FAIL -> (if (rule.violation) "VIOLATION (MANDATORY DECLARATION MISSING)" else "FAIL") to Color(0xFFC62828)
-                RuleStatus.NOT_REQUIRED -> "NOT REQUIRED (OPTIONAL DECLARATION)" to Slate400
+                RuleStatus.NOT_MANDATORY -> "NOT MANDATORY (NON-MANDATORY DECLARATION)" to Slate400
+                RuleStatus.NOT_REQUIRED -> "NOT REQUIRED (CONDITION NOT APPLICABLE)" to Slate400
                 RuleStatus.NOT_APPLICABLE -> "NOT APPLICABLE" to Slate400
                 RuleStatus.MANUAL_REVIEW -> "MANUAL REVIEW" to Color(0xFFEF6C00)
             }

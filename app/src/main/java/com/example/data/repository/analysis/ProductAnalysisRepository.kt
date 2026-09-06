@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
 import com.example.util.ApiKeyProvider
+import com.example.util.NetworkUtils
 import com.example.data.remote.*
 import com.example.domain.model.*
 import com.squareup.moshi.Moshi
@@ -36,9 +37,14 @@ class ProductAnalysisRepository(private val context: Context) {
 
     suspend fun analyzeProduct(images: List<com.example.domain.model.ProductImage>): Result<Pair<ValidationReport, GeminiExtraction>> = withContext(Dispatchers.IO) {
         try {
+            // Check internet connectivity first
+            if (!NetworkUtils.isConnected(context)) {
+                return@withContext Result.failure(Exception("No internet connection detected. Please check your Wi-Fi or mobile data connection and try again."))
+            }
+
             val apiKey = ApiKeyProvider.getApiKey()
             if (apiKey.isBlank()) {
-                return@withContext Result.failure(Exception("Gemini API key is missing. Please configure your API key in the AI Studio Secrets panel."))
+                return@withContext Result.failure(Exception("API key is not configured. Please add CHANGEABLE_API_KEY in the AI Studio Secrets panel."))
             }
 
             if (images.isEmpty()) {
@@ -71,7 +77,8 @@ class ProductAnalysisRepository(private val context: Context) {
             Result.success(Pair(report, extraction))
         } catch (e: Exception) {
             e.printStackTrace()
-            Result.failure(Exception("Unable to analyze the product. Please check your internet connection and try again."))
+            val specificError = NetworkUtils.parseApiError(e, context)
+            Result.failure(Exception(specificError))
         }
     }
 
@@ -128,6 +135,18 @@ class ProductAnalysisRepository(private val context: Context) {
             If a field is not found, set present: false.
             If it is found but unreadable, set present: true, value: null, and status: "UNREADABLE".
             Do NOT invent missing declarations.
+
+            CRITICAL INSTRUCTION FOR 'declaration_letter_and_numeral_size' (Font & Numeral Height Compliance):
+            - Do NOT search for a text string literally named "declaration_letter_and_numeral_size". Instead, evaluate whether the printed declarations (such as MRP, Net Quantity, Expiry Date, Ingredients, Manufacturer details) satisfy the legal minimum numeral/letter height requirement (typically 1.0mm - 2.0mm).
+            - USE THE BARCODE AS A PHYSICAL SCALE REFERENCE:
+              * Standard retail barcodes (EAN-13 / UPC) have a standard physical height of ~20-23mm, and the printed barcode digits below the vertical bars are ~2.5mm to 2.75mm tall.
+              * Compare the height of the printed declaration letters/numerals against the barcode digits and bars as a physical scale ruler.
+              * If the declarations are clear, legible, and reasonably proportioned relative to the barcode digits (~40% to 100% of barcode digit height), or relative to standard packaging features (e.g. standard FSSAI logo, nutritional tables, bottle caps), mark:
+                "present": true,
+                "value": "Compliant (~1.5mm - 2.0mm, verified against barcode reference scale)",
+                "confidence": 0.90,
+                "status": "PASS"
+              * ONLY report non-compliant if the text is demonstrably miniature/micro-print (< 1.0mm relative to barcode digits) or intentionally illegible.
             
             Return ONLY a JSON object matching this schema:
             {

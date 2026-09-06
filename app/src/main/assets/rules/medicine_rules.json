@@ -14,7 +14,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Name and address of manufacturer; where manufacturer is not packer, manufacturer and packer; for imported packages, importer name and address.",
-      "validation_type": "PRESENCE_AND_FORMAT"
+      "validation_type": "PRESENCE_AND_FORMAT",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_1_AA",
@@ -24,7 +26,9 @@
       "requirement": "MANDATORY_IF_IMPORTED",
       "condition": "GENERAL",
       "description": "Name of country of origin, manufacture or assembly must be declared for imported products.",
-      "validation_type": "PRESENCE"
+      "validation_type": "PRESENCE",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_1_B",
@@ -34,7 +38,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Common or generic name of the commodity must be declared; for packages containing more than one product, the name and number or quantity of each product must be declared.",
-      "validation_type": "PRESENCE"
+      "validation_type": "PRESENCE",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_1_C",
@@ -44,7 +50,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Net quantity must be declared in the applicable standard unit of weight or measure, or by number where sold by number.",
-      "validation_type": "PRESENCE_AND_UNIT"
+      "validation_type": "PRESENCE_AND_UNIT",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_1_DA",
@@ -54,7 +62,9 @@
       "requirement": "MANDATORY_IF_APPLICABLE",
       "condition": "GENERAL",
       "description": "If a commodity may become unfit for human consumption after a period of time, the best-before or use-by date, month and year must also be declared, subject to the rule's proviso where another law makes provision.",
-      "validation_type": "PRESENCE_IF_APPLICABLE"
+      "validation_type": "PRESENCE_IF_APPLICABLE",
+      "mandatory": false,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_1_E",
@@ -64,7 +74,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Retail sale price must be declared as the Maximum Retail Price (MRP), inclusive of all taxes, in Indian currency, subject to applicable statutory exceptions.",
-      "validation_type": "PRESENCE_AND_FORMAT"
+      "validation_type": "PRESENCE_AND_FORMAT",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_1_F",
@@ -74,7 +86,9 @@
       "requirement": "MANDATORY_IF_APPLICABLE",
       "condition": "GENERAL",
       "description": "Where size of the commodity is relevant, its dimensions must be declared; where different pieces have different dimensions, the dimensions of each different piece must be stated.",
-      "validation_type": "PRESENCE_IF_APPLICABLE"
+      "validation_type": "PRESENCE_IF_APPLICABLE",
+      "mandatory": false,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_2",
@@ -84,7 +98,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Name, address, telephone number and email address of the person or office to be contacted for consumer complaints must be declared.",
-      "validation_type": "PRESENCE_AND_FORMAT"
+      "validation_type": "PRESENCE_AND_FORMAT",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_7",
@@ -94,7 +110,9 @@
       "requirement": "MANDATORY_IF_GM_FOOD",
       "condition": "GENERAL",
       "description": "Every package containing genetically modified food must bear the words 'GM' at the top of its principal display panel.",
-      "validation_type": "PRESENCE_IF_APPLICABLE"
+      "validation_type": "PRESENCE_IF_APPLICABLE",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_8",
@@ -104,7 +122,9 @@
       "requirement": "MANDATORY_IF_APPLICABLE",
       "condition": "GENERAL",
       "description": "Packages containing soap, shampoos, tooth pastes and other cosmetics and toiletries must bear the prescribed red/brown or green dot according to the provision.",
-      "validation_type": "PRESENCE_IF_APPLICABLE"
+      "validation_type": "PRESENCE_IF_APPLICABLE",
+      "mandatory": false,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_10",
@@ -114,7 +134,9 @@
       "requirement": "MANDATORY_IF_ECOMMERCE",
       "condition": "GENERAL",
       "description": "An e-commerce entity must ensure that mandatory declarations specified in Rule 6(1), except month and year of manufacture/packing/import, are displayed on its digital/electronic network used for e-commerce transactions.",
-      "validation_type": "PRESENCE_ON_LISTING"
+      "validation_type": "PRESENCE_ON_LISTING",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_6_11",
@@ -124,7 +146,9 @@
       "requirement": "MANDATORY_IF_APPLICABLE",
       "condition": "GENERAL",
       "description": "Unit sale price must be declared in rupees, rounded to two decimal places, using the applicable unit basis, subject to the exceptions in Rule 6(11).",
-      "validation_type": "PRESENCE_AND_CALCULATION"
+      "validation_type": "PRESENCE_AND_CALCULATION",
+      "mandatory": false,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_7",
@@ -134,7 +158,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Declarations on the principal display panel must meet the prescribed minimum numeral/letter height requirements; the exact minimum depends on net quantity and method of marking.",
-      "validation_type": "SIZE_AND_LEGIBILITY"
+      "validation_type": "SIZE_AND_LEGIBILITY",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_9_1",
@@ -144,7 +170,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Every required declaration must be legible and prominent; MRP and net quantity numerals must have the prescribed conspicuous contrast, subject to stated exceptions.",
-      "validation_type": "LEGIBILITY_AND_CONTRAST"
+      "validation_type": "LEGIBILITY_AND_CONTRAST",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_9_2",
@@ -154,7 +182,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "No declaration may be made so as to require it to be read through the liquid commodity contained in the package.",
-      "validation_type": "VISIBILITY"
+      "validation_type": "VISIBILITY",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_9_3",
@@ -164,7 +194,9 @@
       "requirement": "MANDATORY_IF_OUTER_CONTAINER",
       "condition": "GENERAL",
       "description": "Where a package has an outside container/wrapper, it must also contain the required declarations unless the stated transparency/inner-package exception applies.",
-      "validation_type": "PRESENCE_IF_APPLICABLE"
+      "validation_type": "PRESENCE_IF_APPLICABLE",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_9_4",
@@ -174,7 +206,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Required particulars must be in Hindi in Devanagari script or English; additional languages are permitted.",
-      "validation_type": "LANGUAGE"
+      "validation_type": "LANGUAGE",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_10",
@@ -184,7 +218,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Package must conspicuously bear manufacturer/packer/importer name and complete address, subject to the small-package identification provision.",
-      "validation_type": "PRESENCE_AND_FORMAT"
+      "validation_type": "PRESENCE_AND_FORMAT",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_11_3",
@@ -194,7 +230,9 @@
       "requirement": "MANDATORY_IF_APPLICABLE",
       "condition": "GENERAL",
       "description": "For commodities likely to undergo significant variation in weight/measure due to environmental or other conditions, quantity may be qualified by the words 'when packed' only where permitted.",
-      "validation_type": "CONDITIONAL_FORMAT"
+      "validation_type": "CONDITIONAL_FORMAT",
+      "mandatory": false,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_12_1",
@@ -204,7 +242,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Quantity declaration must use an appropriate unit of weight, measure or number, or a combination that gives accurate and adequate information.",
-      "validation_type": "UNIT_VALIDATION"
+      "validation_type": "UNIT_VALIDATION",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_12_2",
@@ -214,7 +254,9 @@
       "requirement": "MANDATORY",
       "condition": "GENERAL",
       "description": "Except for Fourth Schedule commodities, quantity is generally expressed by mass for solids/semi-solids/viscous/mixed products, length for linear measure, area for area measure, volume for liquids/cubic measure, or number when sold by number.",
-      "validation_type": "UNIT_AND_CATEGORY_VALIDATION"
+      "validation_type": "UNIT_AND_CATEGORY_VALIDATION",
+      "mandatory": true,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_12_4",
@@ -224,7 +266,9 @@
       "requirement": "MANDATORY_IF_APPLICABLE",
       "condition": "GENERAL",
       "description": "Where weight/measure/number alone is insufficient to give full information about dimensions or number, the relevant additional declaration must accompany it.",
-      "validation_type": "PRESENCE_IF_APPLICABLE"
+      "validation_type": "PRESENCE_IF_APPLICABLE",
+      "mandatory": false,
+      "applicability": "APPLICABLE"
     },
     {
       "rule_id": "LMPC_26_A",
@@ -234,7 +278,9 @@
       "requirement": "EXEMPTION",
       "condition": "GENERAL",
       "description": "Rules do not apply to packages containing 10 g or 10 ml or less when sold by weight or measure, subject to the stated tobacco exception.",
-      "validation_type": "APPLICABILITY"
+      "validation_type": "APPLICABILITY",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_26_B",
@@ -244,7 +290,9 @@
       "requirement": "EXEMPTION",
       "condition": "GENERAL",
       "description": "Rules do not apply to packages containing fast food items packed by a restaurant, hotel and the like.",
-      "validation_type": "APPLICABILITY"
+      "validation_type": "APPLICABILITY",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_MED_26_C",
@@ -254,7 +302,9 @@
       "requirement": "CONDITIONAL_EXEMPTION",
       "condition": "GENERAL",
       "description": "Scheduled and non-scheduled formulations covered under the Drugs (Price Control) Order, 2013 are exempt from these Rules. The exemption does not apply to medical devices declared as drugs.",
-      "validation_type": "APPLICABILITY_CLASSIFICATION"
+      "validation_type": "APPLICABILITY_CLASSIFICATION",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_MED_6_1_A",
@@ -264,7 +314,9 @@
       "requirement": "MANDATORY_IF_LMPC_APPLIES",
       "condition": "GENERAL",
       "description": "For a medicine not covered by the Rule 26(c) exemption, the general manufacturer/packer/importer declaration applies.",
-      "validation_type": "PRESENCE_AND_FORMAT"
+      "validation_type": "PRESENCE_AND_FORMAT",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_MED_6_1_AA",
@@ -274,7 +326,9 @@
       "requirement": "MANDATORY_IF_IMPORTED_AND_LMPC_APPLIES",
       "condition": "GENERAL",
       "description": "For an imported medicine to which LMPC applies, country of origin/manufacture/assembly must be declared.",
-      "validation_type": "PRESENCE"
+      "validation_type": "PRESENCE",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_MED_6_1_B",
@@ -284,7 +338,9 @@
       "requirement": "MANDATORY_IF_LMPC_APPLIES",
       "condition": "GENERAL",
       "description": "For a medicine to which LMPC applies, common or generic name must be declared.",
-      "validation_type": "PRESENCE"
+      "validation_type": "PRESENCE",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_MED_6_1_C",
@@ -294,7 +350,9 @@
       "requirement": "MANDATORY_IF_LMPC_APPLIES",
       "condition": "GENERAL",
       "description": "For a medicine to which LMPC applies, net quantity must be declared in the applicable unit.",
-      "validation_type": "PRESENCE_AND_UNIT"
+      "validation_type": "PRESENCE_AND_UNIT",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_MED_6_1_E",
@@ -304,7 +362,9 @@
       "requirement": "MANDATORY_IF_LMPC_APPLIES",
       "condition": "GENERAL",
       "description": "For a medicine to which LMPC applies, MRP declaration applies subject to the Rules.",
-      "validation_type": "PRESENCE_AND_FORMAT"
+      "validation_type": "PRESENCE_AND_FORMAT",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     },
     {
       "rule_id": "LMPC_MED_6_2",
@@ -314,7 +374,9 @@
       "requirement": "MANDATORY_IF_LMPC_APPLIES",
       "condition": "GENERAL",
       "description": "For a medicine to which LMPC applies, consumer complaint contact details are required.",
-      "validation_type": "PRESENCE_AND_FORMAT"
+      "validation_type": "PRESENCE_AND_FORMAT",
+      "mandatory": false,
+      "applicability": "NOT_APPLICABLE"
     }
   ],
   "exclusions_or_cross_references": [

@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -174,7 +173,7 @@ fun ScanProductScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Grid of images + Add Tile
+                    // Grid of images
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
                         modifier = Modifier
@@ -191,31 +190,9 @@ fun ScanProductScreen(
                                 onRemove = { viewModel.removeImage(item.id) }
                             )
                         }
-
-                        // Add from Camera Tile
-                        item {
-                            AddTile(
-                                icon = Icons.Filled.CameraAlt,
-                                label = "Camera",
-                                onClick = onUseCameraClick
-                            )
-                        }
-
-                        // Add from Gallery Tile
-                        item {
-                            AddTile(
-                                icon = Icons.Filled.PhotoLibrary,
-                                label = "Gallery",
-                                onClick = {
-                                    multipleGalleryLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
-                                }
-                            )
-                        }
                     }
 
-                    // Bottom Action Panel
+                    // Bottom Action Panel: Add Image Actions & Continue
                     Surface(
                         color = GlassWhite,
                         shape = RoundedCornerShape(20.dp),
@@ -233,29 +210,51 @@ fun ScanProductScreen(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 OutlinedButton(
-                                    onClick = onUseCameraClick,
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Blue700)
-                                ) {
-                                    Icon(Icons.Filled.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Add Camera", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                }
-
-                                OutlinedButton(
                                     onClick = {
                                         multipleGalleryLauncher.launch(
                                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                         )
                                     },
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Slate700)
                                 ) {
-                                    Icon(Icons.Filled.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Filled.PhotoLibrary,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Add Gallery", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        "Add from Library",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = onUseCameraClick,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Blue700)
+                                ) {
+                                    Icon(
+                                        Icons.Filled.CameraAlt,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        "Take Photo",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1
+                                    )
                                 }
                             }
 
@@ -336,49 +335,6 @@ fun ProductImageTile(
                 contentDescription = "Remove",
                 tint = Color.White,
                 modifier = Modifier.size(14.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun AddTile(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(14.dp))
-            .background(GlassWhite)
-            .border(1.5.dp, Slate200, RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(Blue100, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = Blue700,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "+ $label",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = Slate700
             )
         }
     }
