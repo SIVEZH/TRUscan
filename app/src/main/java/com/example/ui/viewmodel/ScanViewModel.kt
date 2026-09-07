@@ -22,6 +22,13 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
     private val _productImages = MutableStateFlow<List<ProductImage>>(emptyList())
     val productImages: StateFlow<List<ProductImage>> = _productImages.asStateFlow()
 
+    private val _selectedCategory = MutableStateFlow<com.example.domain.model.ProductCategory?>(null)
+    val selectedCategory: StateFlow<com.example.domain.model.ProductCategory?> = _selectedCategory.asStateFlow()
+
+    fun setCategory(category: com.example.domain.model.ProductCategory) {
+        _selectedCategory.value = category
+    }
+
     fun addImage(uri: Uri, source: ImageSource = ImageSource.CAMERA) {
         val newImage = ProductImage(
             id = UUID.randomUUID().toString(),

@@ -118,17 +118,28 @@ class MainActivity : ComponentActivity() {
                       }
                   },
                   onContinueClick = {
-                      navController.navigate("validation_report")
+                      navController.navigate("select_category")
                   }
               )
             }
+            composable("select_category") {
+                com.example.ui.screens.SelectCategoryScreen(
+                    onCategorySelected = { category ->
+                        scanViewModel.setCategory(category)
+                        navController.navigate("validation_report")
+                    },
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
             composable("validation_report") {
                 val productImages = scanViewModel.productImages.collectAsState().value
+                val selectedCategory = scanViewModel.selectedCategory.collectAsState().value
                 val authState = authViewModel.authState.collectAsState().value
                 val userId = (authState as? AuthState.Success)?.user?.id?.toString() ?: "unknown"
                 if (productImages.isNotEmpty()) {
                     com.example.ui.analysis.ValidationScreen(
                         images = productImages,
+                        category = selectedCategory,
                         userId = userId,
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateHome = { 

@@ -109,9 +109,12 @@ fun LoginSelectionScreen(
                     .fillMaxWidth()
                     .background(Color(0x80EFF6FF), RoundedCornerShape(24.dp))
                     .border(1.dp, Color(0x80DBEAFE), RoundedCornerShape(24.dp))
-                    .padding(24.dp)
+                    .padding(vertical = 20.dp, horizontal = 24.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
                         text = "SUPPORTED CATEGORIES",
                         color = Color(0xCC2563EB),
@@ -121,17 +124,28 @@ fun LoginSelectionScreen(
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("FOOD", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate900.copy(alpha = 0.6f))
-                        Box(modifier = Modifier.size(4.dp).background(Blue300, CircleShape))
-                        Text("COSMETICS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate900.copy(alpha = 0.6f))
-                        Box(modifier = Modifier.size(4.dp).background(Blue300, CircleShape))
-                        Text("MEDS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate900.copy(alpha = 0.6f))
-                        Box(modifier = Modifier.size(4.dp).background(Blue300, CircleShape))
-                        Text("ELEC", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate900.copy(alpha = 0.6f))
+                        Text(
+                            text = "FOOD",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Slate900.copy(alpha = 0.6f),
+                            letterSpacing = 0.5.sp
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(4.dp)
+                                .background(Blue300, CircleShape)
+                        )
+                        Text(
+                            text = "COSMETICS",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Slate900.copy(alpha = 0.6f),
+                            letterSpacing = 0.5.sp
+                        )
                     }
                 }
             }
@@ -146,7 +160,7 @@ fun LoginSelectionScreen(
                 fontWeight = FontWeight.Medium
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("TERMS", color = Blue600.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)

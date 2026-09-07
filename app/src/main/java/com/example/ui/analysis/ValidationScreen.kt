@@ -43,6 +43,7 @@ import com.example.ui.theme.GlassBorder
 @Composable
 fun ValidationScreen(
     images: List<com.example.domain.model.ProductImage>,
+    category: com.example.domain.model.ProductCategory?,
     userId: String,
     onNavigateBack: () -> Unit,
     onNavigateHome: () -> Unit,
@@ -54,7 +55,7 @@ fun ValidationScreen(
 
     LaunchedEffect(Unit) {
         if (state is AnalysisState.Idle) {
-            viewModel.analyzeProduct(images, userId)
+            viewModel.analyzeProduct(images, category, userId)
         }
     }
 
@@ -122,7 +123,7 @@ fun ValidationScreen(
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             Button(
-                                onClick = { viewModel.analyzeProduct(images, userId) },
+                                onClick = { viewModel.analyzeProduct(images, category, userId) },
                                 colors = ButtonDefaults.buttonColors(containerColor = Blue600)
                             ) {
                                 Text("Retry")
@@ -453,6 +454,7 @@ fun ValidationScreen(
     }
     ValidationScreen(
         images = list,
+        category = null,
         userId = userId,
         onNavigateBack = onNavigateBack,
         onNavigateHome = onNavigateHome,
