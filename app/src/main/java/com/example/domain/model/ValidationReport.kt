@@ -39,9 +39,6 @@ data class RuleResult(
     val mandatory: Boolean = false,
     val applicability: Applicability = Applicability.APPLICABLE,
     val violation: Boolean = false,
-    val controlling_provision: String? = null,
-    val overridden: Boolean = false,
-    val overridden_by: String? = null,
     val evidence: Evidence? = null
 ) {
     val applicable: Boolean
@@ -56,7 +53,8 @@ data class ValidationSummary(
     val manual_review: Int,
     val not_mandatory: Int = 0,
     val not_required: Int = 0,
-    val total_violations: Int = 0
+    val total_violations: Int = 0,
+    val excluded_rules: Int = 0
 )
 
 data class ValidationReport(
@@ -77,7 +75,7 @@ data class ValidationReport(
      */
     val hasConfirmedMandatoryViolation: Boolean
         get() = results.any {
-            it.status == RuleStatus.FAIL && it.mandatory && it.applicable && !it.overridden
+            it.status == RuleStatus.FAIL && it.mandatory && it.applicable
         }
 
     val canRaiseComplaint: Boolean
