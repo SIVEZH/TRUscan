@@ -5,10 +5,15 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
+import com.example.data.remote.RetrofitClient
+import com.example.data.remote.Content
+import com.example.data.remote.GenerateContentRequest
+import com.example.data.remote.GenerationConfig
+import com.example.data.remote.InlineData
+import com.example.data.remote.Part
+import com.example.domain.model.*
 import com.example.util.ApiKeyProvider
 import com.example.util.NetworkUtils
-import com.example.data.remote.*
-import com.example.domain.model.*
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
@@ -22,13 +27,11 @@ class ProductAnalysisRepository(private val context: Context) {
         val fileName = when (category) {
             "FOOD" -> "rules/food_rules.json"
             "COSMETICS" -> "rules/cosmetics_rules.json"
-            "MEDICINES" -> "rules/medicine_rules.json"
             else -> return null
         }
-        
         return try {
-            val jsonString = context.assets.open(fileName).bufferedReader().use { it.readText() }
-            moshi.adapter(RuleSet::class.java).fromJson(jsonString)
+            val json = context.assets.open(fileName).bufferedReader().use { it.readText() }
+            moshi.adapter(RuleSet::class.java).fromJson(json)
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -37,34 +40,30 @@ class ProductAnalysisRepository(private val context: Context) {
 
     suspend fun analyzeProduct(images: List<com.example.domain.model.ProductImage>): Result<Pair<ValidationReport, GeminiExtraction>> = withContext(Dispatchers.IO) {
         try {
-            // Check internet connectivity first
             if (!NetworkUtils.isConnected(context)) {
                 return@withContext Result.failure(Exception("No internet connection detected. Please check your Wi-Fi or mobile data connection and try again."))
             }
-
             val apiKey = ApiKeyProvider.getApiKey()
             if (apiKey.isBlank()) {
                 return@withContext Result.failure(Exception("API key is not configured. Please add CHANGEABLE_API_KEY in the AI Studio Secrets panel."))
             }
-
             if (images.isEmpty()) {
                 return@withContext Result.failure(Exception("Please provide at least one product image."))
             }
-
             val base64List = images.mapNotNull { uriToBase64(it.uri) }
             if (base64List.isEmpty()) {
                 return@withContext Result.failure(Exception("Unable to process images."))
             }
 
-            // Step 1: Detect Category from all provided images
+            // Step 1: Detect Category
             val category = detectCategory(base64List)
             if (category == "UNKNOWN") {
-                return@withContext Result.failure(Exception("Unable to determine whether this product is food, cosmetic, or medicine. Please provide clearer images."))
+                return@withContext Result.failure(Exception("TRUscan currently supports only Food and Cosmetics products. Please provide images of products in these categories."))
             }
 
             // Step 2: Load Rules
             val ruleSet = loadRuleSet(category)
-                ?: return@withContext Result.failure(Exception("Unable to load the validation rules. Please try again later."))
+                ?: return@withContext Result.failure(Exception("Unable to load the validation rules for this category."))
 
             // Step 3: Extract Declarations
             val extraction = extractDeclarations(base64List, category, ruleSet)
@@ -93,7 +92,11 @@ class ProductAnalysisRepository(private val context: Context) {
     private suspend fun detectCategory(base64Images: List<String>): String {
         val prompt = """
             Analyze these images of a product package.
-            Determine the product category. It MUST be exactly one of: FOOD, COSMETICS, MEDICINES, or UNKNOWN.
+            Classify the packaged commodity into exactly one of:
+            FOOD
+            COSMETICS
+            UNKNOWN
+            
             Return ONLY a JSON object matching this schema:
             {
               "category": "FOOD", 
@@ -119,7 +122,8 @@ class ProductAnalysisRepository(private val context: Context) {
         return try {
             val cleanJson = text.replace("```json", "").replace("```", "").trim()
             val result = moshi.adapter(CategoryDetectionResult::class.java).fromJson(cleanJson)
-            result?.category ?: "UNKNOWN"
+            val cat = result?.category?.uppercase() ?: "UNKNOWN"
+            if (cat == "FOOD" || cat == "COSMETICS") cat else "UNKNOWN"
         } catch (e: Exception) {
             "UNKNOWN"
         }
@@ -133,6 +137,7 @@ class ProductAnalysisRepository(private val context: Context) {
             You must process all images together as different views of the SAME package.
             
             First, determine the package classification:
+            - product_type: A short specific string indicating the type (e.g. EDIBLE_OIL, BISCUIT, SOAP, SHAMPOO, CREAM)
             - is_food: true if it is a food product
             - is_prepackaged: true if it is pre-packaged
             - is_retail: true if it is for retail sale
@@ -149,6 +154,7 @@ class ProductAnalysisRepository(private val context: Context) {
               "category": "$category",
               "category_confidence": 0.95,
               "package_classification": {
+                "product_type": "BISCUIT",
                 "is_food": true,
                 "is_prepackaged": true,
                 "is_retail": true,
@@ -190,7 +196,7 @@ class ProductAnalysisRepository(private val context: Context) {
                  GeminiExtraction(
                      category = rawResult.category ?: category,
                      category_confidence = rawResult.category_confidence ?: 1.0,
-                     fields = emptyMap(), // This will be populated by the merger in RuleEngine
+                     fields = emptyMap(),
                      package_classification = rawResult.package_classification,
                      extractions = rawResult.extractions
                  )
@@ -218,7 +224,7 @@ class ProductAnalysisRepository(private val context: Context) {
             val outputStream = ByteArrayOutputStream()
             resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
             val base64Image = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
-
+            
             if (resizedBitmap != bitmap) {
                 resizedBitmap.recycle()
             }

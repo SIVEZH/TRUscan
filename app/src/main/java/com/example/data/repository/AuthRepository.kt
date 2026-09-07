@@ -42,17 +42,6 @@ class AuthRepository(private val userDao: UserDao) {
                         authorityCategory = "COSMETICS"
                     )
                 )
-                userDao.insertUser(
-                    UserEntity(
-                        id = 4,
-                        name = "Medicines Authority",
-                        email = "medicine@test.com",
-                        phone = null,
-                        passwordHash = "Test@123",
-                        role = "AUTHORITY",
-                        authorityCategory = "MEDICINES"
-                    )
-                )
             }
         }
     }

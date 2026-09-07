@@ -11,6 +11,9 @@ data class CategoryDetectionResult(
 
 @JsonClass(generateAdapter = true)
 data class PackageClassification(
+    val category: String? = null,
+    val product_type: String? = null,
+    val sub_type: String? = null,
     val is_food: Boolean? = null,
     val is_prepackaged: Boolean? = null,
     val is_retail: Boolean? = null,
