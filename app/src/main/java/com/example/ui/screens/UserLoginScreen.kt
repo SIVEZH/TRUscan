@@ -36,7 +36,8 @@ import com.example.ui.viewmodel.AuthViewModel
 fun UserLoginScreen(
     viewModel: AuthViewModel,
     onBack: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onSignUpClick: () -> Unit
 ) {
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
@@ -164,31 +165,24 @@ fun UserLoginScreen(
                             if (authState is AuthState.Loading) {
                                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                             } else {
-                                Text("Login", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Sign In", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
 
-                        TextButton(
-                            onClick = {
-                                loginId = "user@test.com"
-                                password = "Test@123"
-                            },
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        ) {
-                            Text("Fill Demo Account (user@test.com)", fontSize = 12.sp, color = Blue600)
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
+                        Spacer(modifier = Modifier.height(24.dp))
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextButton(onClick = { Toast.makeText(context, "Feature coming soon.", Toast.LENGTH_SHORT).show() }) {
-                                Text("Forgot Password", color = Slate500, fontWeight = FontWeight.SemiBold)
-                            }
-                            TextButton(onClick = { Toast.makeText(context, "Feature coming soon.", Toast.LENGTH_SHORT).show() }) {
-                                Text("Sign Up", color = Blue600, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Don't have an account?",
+                                color = Slate500,
+                                fontSize = 14.sp
+                            )
+                            TextButton(onClick = onSignUpClick) {
+                                Text("Sign Up", color = Blue600, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                     }

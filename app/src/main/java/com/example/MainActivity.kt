@@ -40,7 +40,8 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
     
     val database = AppDatabase.getDatabase(this)
-    val repository = AuthRepository(database.userDao())
+    val sessionManager = com.example.data.local.SessionManager(this)
+    val repository = AuthRepository(database.userDao(), sessionManager)
     val factory = AuthViewModelFactory(repository)
 
     setContent {
@@ -50,6 +51,25 @@ class MainActivity : ComponentActivity() {
         val scanViewModel: ScanViewModel = viewModel()
         val complaintViewModel: com.example.ui.viewmodel.ComplaintViewModel = viewModel()
         val authState by authViewModel.authState.collectAsState()
+
+        LaunchedEffect(authState) {
+            val currentRoute = navController.currentDestination?.route
+            if (authState is AuthState.Success) {
+                val role = (authState as AuthState.Success).user.role
+                val target = if (role == "AUTHORITY") "authority_dashboard" else "user_dashboard"
+                if (currentRoute == "selection" || currentRoute == "user_login" || currentRoute == "authority_login" || currentRoute == "user_signup") {
+                    navController.navigate(target) {
+                        popUpTo("selection") { inclusive = true }
+                    }
+                }
+            } else if (authState is AuthState.Idle) {
+                if (currentRoute != null && currentRoute != "selection" && currentRoute != "user_login" && currentRoute != "authority_login" && currentRoute != "user_signup") {
+                    navController.navigate("selection") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            }
+        }
 
         val cameraPermissionLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestPermission(),
@@ -82,6 +102,24 @@ class MainActivity : ComponentActivity() {
                   navController.navigate("user_dashboard") {
                     popUpTo("selection") { inclusive = false }
                   }
+                },
+                onSignUpClick = {
+                  navController.navigate("user_signup")
+                }
+              )
+            }
+            
+            composable("user_signup") {
+              UserSignUpScreen(
+                viewModel = authViewModel,
+                onBack = { navController.popBackStack() },
+                onSignUpSuccess = {
+                  navController.navigate("user_dashboard") {
+                    popUpTo("selection") { inclusive = false }
+                  }
+                },
+                onLoginClick = {
+                  navController.popBackStack()
                 }
               )
             }
@@ -102,7 +140,6 @@ class MainActivity : ComponentActivity() {
                 onPreviousScansClick = { navController.navigate("previous_scans") },
                 onLogoutClick = {
                   authViewModel.logout()
-                  navController.popBackStack("selection", inclusive = false)
                 }
               )
             }
@@ -135,7 +172,7 @@ class MainActivity : ComponentActivity() {
                 val productImages = scanViewModel.productImages.collectAsState().value
                 val selectedCategory = scanViewModel.selectedCategory.collectAsState().value
                 val authState = authViewModel.authState.collectAsState().value
-                val userId = (authState as? AuthState.Success)?.user?.id?.toString() ?: "unknown"
+                val userId = (authState as? AuthState.Success)?.user?.userId ?: "unknown"
                 if (productImages.isNotEmpty()) {
                     com.example.ui.analysis.ValidationScreen(
                         images = productImages,
@@ -160,7 +197,7 @@ class MainActivity : ComponentActivity() {
                     complaintViewModel.initialize(
                         context = this@MainActivity,
                         scanId = scanId,
-                        currentUserId = user?.id?.toString() ?: "unknown",
+                        currentUserId = user?.userId ?: "unknown",
                         userName = user?.name,
                         userEmail = user?.email,
                         userPhone = user?.phone,
@@ -247,7 +284,7 @@ class MainActivity : ComponentActivity() {
             }
             composable("previous_scans") {
                 val authState = authViewModel.authState.collectAsState().value
-                val userId = (authState as? AuthState.Success)?.user?.id?.toString() ?: "unknown"
+                val userId = (authState as? AuthState.Success)?.user?.userId ?: "unknown"
                 PreviousScansScreen(
                     userId = userId,
                     onBackClick = { navController.popBackStack() },
@@ -284,7 +321,6 @@ class MainActivity : ComponentActivity() {
                 category = user?.authorityCategory,
                 onLogoutClick = {
                   authViewModel.logout()
-                  navController.popBackStack("selection", inclusive = false)
                 },
                 onComplaintClick = { complaintId ->
                   navController.navigate("authority_complaint_detail/$complaintId")
@@ -296,7 +332,7 @@ class MainActivity : ComponentActivity() {
                 val user = (authState as? AuthState.Success)?.user
                 AuthorityComplaintDetailScreen(
                     complaintId = complaintId,
-                    authorityId = user?.id?.toString() ?: "unknown",
+                    authorityId = user?.userId ?: "unknown",
                     authorityCategory = user?.authorityCategory ?: "UNKNOWN",
                     onBackClick = { navController.popBackStack() },
                     onNavigateToComplainant = { id -> navController.navigate("complainant_details/$id") }
@@ -307,7 +343,7 @@ class MainActivity : ComponentActivity() {
                 val user = (authState as? AuthState.Success)?.user
                 ComplainantDetailsScreen(
                     complaintId = complaintId,
-                    authorityId = user?.id?.toString() ?: "unknown",
+                    authorityId = user?.userId ?: "unknown",
                     authorityCategory = user?.authorityCategory ?: "UNKNOWN",
                     onBackClick = { navController.popBackStack() }
                 )

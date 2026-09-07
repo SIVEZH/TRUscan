@@ -4,8 +4,9 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,21 +34,25 @@ import com.example.ui.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuthorityLoginScreen(
+fun UserSignUpScreen(
     viewModel: AuthViewModel,
     onBack: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onSignUpSuccess: () -> Unit,
+    onLoginClick: () -> Unit
 ) {
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
     
-    var loginId by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(authState) {
         if (authState is AuthState.Success) {
-            onLoginSuccess()
+            onSignUpSuccess()
         } else if (authState is AuthState.Error) {
             Toast.makeText(context, (authState as AuthState.Error).message, Toast.LENGTH_SHORT).show()
             viewModel.resetError()
@@ -59,7 +64,7 @@ fun AuthorityLoginScreen(
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Authority Login", fontWeight = FontWeight.Bold, color = Slate900) },
+                    title = { Text("Sign Up", fontWeight = FontWeight.Bold, color = Slate900) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Slate900)
@@ -95,23 +100,40 @@ fun AuthorityLoginScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Authority Portal",
+                            text = "Create Account",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Slate900,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         Text(
-                            text = "Please enter your authority ID.",
+                            text = "Please enter your details to sign up.",
                             fontSize = 14.sp,
                             color = Slate500,
                             modifier = Modifier.padding(bottom = 24.dp)
                         )
 
                         OutlinedTextField(
-                            value = loginId,
-                            onValueChange = { loginId = it },
-                            label = { Text("Authority ID / Email") },
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Name") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedContainerColor = Color.White.copy(alpha = 0.5f),
+                                focusedContainerColor = Color.White.copy(alpha = 0.8f),
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = Blue600
+                            )
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text("Email Address") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -120,7 +142,7 @@ fun AuthorityLoginScreen(
                                 unfocusedContainerColor = Color.White.copy(alpha = 0.5f),
                                 focusedContainerColor = Color.White.copy(alpha = 0.8f),
                                 unfocusedBorderColor = Color.Transparent,
-                                focusedBorderColor = Amber700
+                                focusedBorderColor = Blue600
                             )
                         )
                         
@@ -145,26 +167,86 @@ fun AuthorityLoginScreen(
                                 unfocusedContainerColor = Color.White.copy(alpha = 0.5f),
                                 focusedContainerColor = Color.White.copy(alpha = 0.8f),
                                 unfocusedBorderColor = Color.Transparent,
-                                focusedBorderColor = Amber700
+                                focusedBorderColor = Blue600
+                            )
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it },
+                            label = { Text("Confirm Password") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            trailingIcon = {
+                                val image = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                    Icon(image, contentDescription = "Toggle confirm password visibility")
+                                }
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedContainerColor = Color.White.copy(alpha = 0.5f),
+                                focusedContainerColor = Color.White.copy(alpha = 0.8f),
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = Blue600
                             )
                         )
                         
                         Spacer(modifier = Modifier.height(32.dp))
                         
                         Button(
-                            onClick = { viewModel.login(loginId, password, "AUTHORITY") },
+                            onClick = {
+                                if (name.isBlank()) {
+                                    Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                if (email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                                    Toast.makeText(context, "Please enter a valid email address.", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                if (password.length < 8) {
+                                    Toast.makeText(context, "Password must be at least 8 characters.", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                if (password != confirmPassword) {
+                                    Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                viewModel.register(name, email, password, "USER")
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp)
-                                .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = Amber700),
+                                .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = Blue600),
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Amber700),
+                            colors = ButtonDefaults.buttonColors(containerColor = Blue600),
                             enabled = authState !is AuthState.Loading
                         ) {
                             if (authState is AuthState.Loading) {
                                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                             } else {
-                                Text("Login", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Create Account", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Already have an account?",
+                                color = Slate500,
+                                fontSize = 14.sp
+                            )
+                            TextButton(onClick = onLoginClick) {
+                                Text("Sign In", color = Blue600, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                     }
